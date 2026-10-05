@@ -23,13 +23,21 @@ bootstrap (seal_key), as the device derives it (digikit, dt2/authcode.py).
 
 verify() re-reads an output file with the decoder, not the writer. It
 refuses the file unless every other section is stock and the main OS
-depacks, in place as the bootloader does it, to the expected image.
+depacks, in place as the bootloader does it, to the expected image. A
+device with a second loader that stages elsewhere (Device.more_stages: the
+Digitone II's section 4) gets the same in-place check there. Where the
+profile gives receive_max (the Digitone II's OS receives an upgrade into a
+2 MiB buffer), the decoded stream must fit it.
+
+pack_main() uses codec/dense.py instead of codec/aplib.py for a device whose
+profile names packer 'dense': on the Digitone II, aplib's stream is 260 KB
+longer than Elektron's and the container would not fit that buffer.
 """
 import hashlib
 import hmac
 import struct
 
-from .codec import aplib, elz, transport
+from .codec import aplib, dense, elz, transport
 
 COUNT_OFF, TABLE_OFF, ENTRY_SZ = 0x1C, 0x20, 16
 DIGEST = 32                       # the HMAC-SHA256 trailer of a sealed device
@@ -147,8 +155,16 @@ class Syx:
         return unstore(self.stored[sid])
 
 
-def pack_main(image):
-    """Main OS image -> its stored section (the aPLib-shaped packer)."""
+def pack_main(image, dev=None):
+    """Main OS image -> its stored section: the aPLib-shaped packer, or, for a
+    device whose profile names packer 'dense', codec/dense.py with its in-place
+    floor at the lowest of the device's stages (so at every one of them)."""
+    if dev is not None and dev.packer == 'dense':
+        stages = dev.stages()
+        base = min(stages) - dev.main_load if stages else None
+        return dense.pack_section(bytes(image), base)[0]
+    if dev is not None and dev.packer != 'aplib':
+        raise SyxError('%s: no packer %r' % (dev.name, dev.packer))
     return aplib.pack_section(bytes(image))
 
 
@@ -201,16 +217,16 @@ def write(stock, stored_main, dev, version=None):
     return transport.encode_syx(stream, stock.device_id, stock.framing[0], stock.framing[1])
 
 
-def inplace_depack(stored, dev):
+def inplace_depack(stored, dev, stage=None):
     """Depack the main OS the way the bootloader does it in place: the stored
-    section staged at dev.stage, the output written from dev.main_load over
-    it. -> (image, the smallest distance in bytes between the writer and the
-    next unread stream byte). A distance > 0 throughout means the in-place
-    result is the same as depacking elsewhere."""
+    section staged at `stage` (default dev.stage), the output written from
+    dev.main_load over it. -> (image, the smallest distance in bytes between
+    the writer and the next unread stream byte). A distance > 0 throughout
+    means the in-place result is the same as depacking elsewhere."""
     length = struct.unpack_from('>I', stored, 0)[0]
     s = elz.Bits(stored, 8, 8 + length)
     out = bytearray()
-    base = dev.stage - dev.main_load       # the stream's offset from the load address
+    base = (dev.stage if stage is None else stage) - dev.main_load   # the stream's offset
     gap = None
     last = 1
     while True:
@@ -289,6 +305,10 @@ def verify(out, stock, want_main, dev, version=None):
     if dev.flash_at + o.total > dev.flash_limit:
         raise SyxError('the container ends at flash 0x%x > 0x%x'
                        % (dev.flash_at + o.total, dev.flash_limit))
+    received = len(o.data) * CHUNK         # what the OS's receiver writes: whole chunks
+    if dev.receive_max is not None and received > dev.receive_max:
+        raise SyxError('the upgrade stream is %d bytes (container %d), over the OS\'s 0x%x-byte '
+                       'receive buffer' % (received, o.total, dev.receive_max))
     hd = [i for i in range(COUNT_OFF) if o.header[i] != stock.header[i]]
     if any(not 0x14 <= i < 0x18 for i in hd):
         raise SyxError('ELE3 header differs outside the version field: %s' % hd)
@@ -312,16 +332,29 @@ def verify(out, stock, want_main, dev, version=None):
         raise SyxError('the main OS does not depack to the patched image')
     if elz.depack_section(s3) != img:
         raise SyxError('the main OS: the depacker disagrees with the in-place depack')
-    if gap <= 0:
-        raise SyxError('the main OS: the in-place depack overwrites unread input (gap %d)' % gap)
-    return {
+    gaps = {dev.stage: gap}
+    for st in dev.stages()[1:]:            # another loader's stage: the same check there
+        other, gaps[st] = inplace_depack(s3, dev, st)
+        if other != img:
+            raise SyxError('the main OS: the in-place depack from 0x%08x differs' % st)
+    for st, g in gaps.items():
+        if g <= 0:
+            raise SyxError('the main OS: the in-place depack from 0x%08x overwrites unread '
+                           'input (gap %d)' % (st, g))
+    facts = {
         'sha256': sha(out), 'bytes': len(out), 'messages': len(o.data) + 2,
         'content_checksum': '0x%08x' % o.checksum, 'container_len': o.total,
         'flash_end': '0x%06x' % (dev.flash_at + o.total),
         'flash_headroom': dev.flash_limit - dev.flash_at - o.total,
         'ele3_version': o.version,
         'main': {'section': main, 'stored': len(s3), 'image': len(img), 'sha256': sha(img),
-                 'staged_to': '0x%08x' % (dev.stage + len(s3)), 'inplace_min_gap': gap},
+                 'staged_to': '0x%08x' % (dev.stage + len(s3)),
+                 'inplace_min_gap': min(gaps.values()),
+                 'inplace_gaps': {'0x%08x' % st: g for st, g in gaps.items()}},
         'sections': {str(s): {'stored': l, 'stored_sha256': sha(o.stored[s]), 'stock': s != main}
                      for s, _o, l, _d in o.table},
     }
+    if dev.receive_max is not None:
+        facts['received'] = received
+        facts['receive_headroom'] = dev.receive_max - received
+    return facts

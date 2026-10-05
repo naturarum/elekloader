@@ -126,7 +126,10 @@ def build(stock_path, mod_paths, version=None, check_only=False, log=print):
     except formats.FormatError as e:
         raise PatchError(str(e))
     t = time.time()
-    stored = formats.pack_main(img)
+    try:
+        stored = formats.pack_main(img, dev)
+    except formats.FormatError as e:
+        raise PatchError(str(e))
     log('packed the main OS: %d -> %d bytes (%.1f s)' % (len(img), len(stored), time.time() - t))
     try:
         outputs = formats.write(stock, stored, dev, version)
@@ -134,10 +137,15 @@ def build(stock_path, mod_paths, version=None, check_only=False, log=print):
     except formats.FormatError as e:
         raise PatchError('the output failed verification: %s' % e)
     gap = facts['main'].get('inplace_min_gap')
-    log('verified: %s; the main OS depacks to the patched image%s; flash ends %s (%d bytes spare)'
+    gaps = facts['main'].get('inplace_gaps') or {}
+    log('verified: %s; the main OS depacks to the patched image%s; flash ends %s (%d bytes spare)%s'
         % ('; '.join(facts['untouched']),
-           ' in place (min gap %d bytes)' % gap if gap is not None else '',
-           facts['flash_end'], facts['flash_headroom']))
+           (' in place (min gap %d bytes%s)'
+            % (gap, ''.join(', %s at %s' % (g, s) for s, g in gaps.items()) if len(gaps) > 1
+               else '')) if gap is not None else '',
+           facts['flash_end'], facts['flash_headroom'],
+           '; %d bytes spare in the receive buffer' % facts['receive_headroom']
+           if 'receive_headroom' in facts else ''))
     man['version'] = version
     man['output'] = facts
     return outputs, man

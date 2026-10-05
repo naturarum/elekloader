@@ -55,6 +55,13 @@ class Device:
                                  # the OS reaches only through the 4-byte operands at the refs,
                                  # and never writes, so a mod may serve its own copy instead
     blob_max: int = None         # the most a whole build may append (None: the flash budget)
+    more_stages: tuple = ()      # ((stage, why), ...): further places another loader of the
+                                 # device stages the main OS and unpacks it in place from;
+                                 # verify checks the in-place gap at each, as at `stage`
+    receive_max: int = None      # the bytes of the OS's upgrade receive buffer: the decoded
+                                 # stream, whole 101-byte chunks, must fit (None: no limit known)
+    packer: str = 'aplib'        # the main OS's packer: 'aplib' (codec/aplib.py), or 'dense'
+                                 # (codec/dense.py, keeping the in-place gap at every stage)
     areas: dict = field(default_factory=dict)   # name -> (lo, hi): free at run time
     ddr: tuple = (0, 0)          # the linker's area for .run, tables and .bss
     sram_code: tuple = (0, 0)    # the linker's area for .fast code
@@ -73,6 +80,13 @@ class Device:
                 return r
         return None
 
+    def stages(self):
+        """-> every address a loader stages the main OS at before unpacking it in place
+        (`stage` first; empty when `stage` is unknown)."""
+        if self.stage is None:
+            return ()
+        return (self.stage,) + tuple(s for s, _why in self.more_stages)
+
     def linkable(self):
         """Whether format-2 mods (a core, the linker's areas) exist for it."""
         return self.ddr[1] > self.ddr[0]
@@ -89,8 +103,9 @@ class Device:
 
 
 def _all():
-    from . import digitakt_mk1, digitakt_mk2, digitone_mk1, octatrack
-    return [digitakt_mk1.DEVICE, digitakt_mk2.DEVICE, digitone_mk1.DEVICE, octatrack.DEVICE]
+    from . import digitakt_mk1, digitakt_mk2, digitone_mk1, digitone_mk2, octatrack
+    return [digitakt_mk1.DEVICE, digitakt_mk2.DEVICE, digitone_mk1.DEVICE, digitone_mk2.DEVICE,
+            octatrack.DEVICE]
 
 
 DEVICES = None

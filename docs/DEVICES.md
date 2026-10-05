@@ -14,6 +14,9 @@ and a hook bus of its own.
 | `main_section`, `main_load` | which container section is the main OS, and where it runs | the section table (id 3, `0x40000400`) |
 | `stage` | where the bootloader stages the main OS before unpacking it in place | the bootstrap's loader (`0x800005fe`: read to `0x40200000`, unpack to `0x40000400`) |
 | `flash_at`, `flash_limit` | where the container sits in flash and must end | the bootstrap (`0x80000` .. `0x380000`) |
+| `more_stages` | further places another loader stages the main OS and unpacks it in place from; verify checks the gap at each | none on the mk1 (the Digitone II's section 4 stages at `0x40200000`) |
+| `receive_max` | the OS's upgrade receive buffer: the decoded stream, in whole 101-byte chunks, must fit | none on the mk1 (the Digitone II's is 2 MiB) |
+| `packer` | the main OS's packer: `'aplib'` (`codec/aplib.py`) or `'dense'` (`codec/dense.py`, with its in-place floor at the lowest stage) | `'aplib'` |
 | `trailer` | how the file is sealed: `None`, or `'hmac'` | mk1 has none |
 | `hmac_key_from` | for `'hmac'`: the section and seed string the key is derived from (never the key itself) | none on the mk1 |
 | `isa` | the main CPU's instruction decoder, for the boundary checks | ColdFire (`isa/coldfire.py`) |
@@ -159,6 +162,118 @@ below was found again in 1.17.
   - Not covered: anything a session in the emulator does not reach (no
     DSP, no samples, an empty +Drive) and the unit run did not use.
 
+## The Digitone II (1.12)
+
+Experimental: whole builds (format-1 mods) only, since it has no core yet
+(format-2 mods are refused). Not yet run on a unit. Each fact below was
+found again in 1.12 with the Digitakt II's as the map, and
+tests/test_digitone2.py checks each one against the stock file.
+
+- **Files.** The Digitakt II's family, device byte `0x15`, the same six
+  sections: 5, 2 (the bootstrap, at `0x80000400`; its `dest` is the
+  version `0x0201`), 3 (MAIN OS, 3,196,288 bytes, to `0x4030C980`), 4 (a
+  factory board test that can also boot the OS, below), 7 (the SHARC's
+  program) and 8 (firmware the OS sends to a USB accessory). From its own
+  main OS stream, the writer reproduces the stock file byte for byte.
+- **Sealed** as the Digitakt II's are, with the seed `"Multiplier"` (the
+  bootstrap derives the key at `0x80005da4` and checks the trailer at
+  `0x80005e3a`).
+- **Two loaders, so two stages** (`stage`, `more_stages`):
+  - the bootstrap's (`0x80000596`) reads section 3 from flash, at its
+    offset + `0x80000`, to `0x40400000`, and depacks it to `0x40000400`
+    (`0x80000432`). Stock's in-place gap: 2,128,334 bytes;
+  - section 4's (`0x8000357c`) reads it to `0x40200000` and depacks it in
+    place with its copy of the same depacker (`0x80005728`). The bootstrap
+    runs section 4 instead (`0x80000eee`) when boot flag bit 6 is set, and
+    only `0x80000b9a` sets it, when the power-on key read from the panel
+    (`0x80001276`) times out. Stock's gap there is 31,182 bytes;
+    elektron-firmware-tool's default level gives -39,318, and under Unicorn
+    the unit's code then depacks wrong from `0x40303180` and never returns.
+    So verify needs a gap > 0 at both stages.
+- **The receive buffer** (`receive_max`). The in-OS upgrade (Transfer's
+  route, over USB or MIDI) decodes the file into the static buffer at
+  `0x4038bee0` (`0x40122574`), one 101-byte chunk per message
+  (`0x4012257c`), with no bound on the message count. The next object the
+  code names is at `0x4058bee0`. So the decoded stream must fit 2 MiB, or
+  the upgrade overruns RAM. Stock fills 1,886,074 bytes of it. This is
+  tighter than the flash: the settings records are at `0x380000` and
+  `0x3c0000` (26 and 12 call sites), so `flash_limit` is `0x380000`.
+- **The packer** (`packer='dense'`). Packed by `codec/aplib.py`, the
+  stock image's section is 1,392,294 bytes, 260,946 more than Elektron's
+  1,131,348: the container, 2,146,960 bytes, overruns the buffer.
+  `codec/dense.py` packs it to 1,155,260, with a gap of 55,094 at
+  `0x40200000` and 187,141 bytes spare in the buffer. When a build's image
+  grows with data that packs well, dense keeps the gap at `0x40200000`
+  with literals (its floor). The two limits together cap how far the image
+  can grow: about 164 KB of data that does not pack (168,000 random bytes
+  fit, 168,320 do not), about 236 KB of zeros.
+- **Checked with the unit's own code** (digikit's
+  `tools/acceptoracle.py`, under Unicorn, 5 Oct 2026):
+  - a no-mod build (version DN01): section 4's loader and the
+    bootstrap's boot path both give the stock image and enter the main OS
+    at `0x400004e8`; the bootstrap's verify-and-commit and the OS's
+    upgrade validator pass;
+  - the stock image with 120 KB of zeros appended, packed with the floor
+    (gap exactly 1 at `0x40200000`): both loaders give the intended image;
+  - the same image packed without the floor (gap -67,685 at
+    `0x40200000`, refused by verify): the bootstrap's path gives the right
+    image, but section 4's loader gets 1,623 bytes wrong from `0x4031a7b2`
+    and never reaches the main OS. The second stage's check refuses
+    exactly what the unit would get wrong.
+- **Checked in an emulator** (digikit's, `emu.checkpoint` from a cold boot,
+  then `tools/emucheck.py` to 600M instructions; 5 Oct 2026): the no-mod
+  build passes every stage as stock does, with the same task creations at
+  the same instruction counts, the main screen first at instruction
+  741,578,400, and a main screen byte-identical to stock's.
+- **What writes the flash** (tests/test_digitone2.py checks each against
+  the stock file). The SPI NOR driver's program, erase and protection
+  entries (`0x40134a28`-`0x4013621c`) are named only by the settings store
+  (`0x400cccc6`-`0x400cd21e`), the factory console (`0x400cd5f2`-
+  `0x400cebd2`, only in maintenance mode), the migration that erases a
+  `COKi` block at `0x400000`, `0x800000` or `0xc00000` (`0x400f2022`), and
+  the in-OS upgrade writer (`0x40139104`), which runs the validator
+  `0x400dbdb0` first and then erases and writes from `0x80000` with no
+  length clamp. The console's `#FULL_UPGRADE` can rewrite the bootstrap
+  at `0x40000` (the Digitakt II section above finds no such path there); it is
+  dormant unless the unit starts in maintenance mode.
+- **Protected** (`protected`): the panel MCU updater (`0x400dba28`-
+  `0x400dbdae`, run on every normal boot; it reprograms the front panel
+  when its firmware is older than the word at `0x402f7d44`), the panel
+  firmware it sends (`0x402f7d40`-`0x402fb494`: the updater's own
+  `move.l #0x402fb494,d3 ; subi.l #0x402f7d40,d3`), the NOR driver, and
+  the in-OS writer. The STARTUP menu needs the panel to answer.
+- **Recovery.** The startup menu (FUNC at power-on), TRIG 4 for OS
+  UPGRADE, then the stock `.syx` over 5-pin DIN MIDI: the bootstrap has
+  no USB code. It checks the content checksum and the seal before it
+  writes. A unit went through it on 5 Oct 2026 with stock 1.12.
+- **At reset** (`0x400004e8`), the OS:
+  - copies `0x402fd000-0x40305000` to SRAM at `0x80000000` and
+    `0x40305000-0x4030c980` to `0x80008000` (both all zeros in the
+    image), and zeroes `0x8000f980-0x80010000`;
+  - clears DDR `0x402fd000-0x466b84d0`, from inside the image's end, so a
+    blob appended there is cleared too unless something copies it first;
+  - runs its stack down from `0x48000000`.
+- **Free memory** (`areas`; `ddr` and `sram_code` wait for a core):
+  - DDR `0x46800000-0x47F00000`. Above the clear, the code names only the
+    DMA buffers, all through the uncached alias, up to `0x4e709340`
+    (`0x46709340` cached). Over `0x466b84d0-0x48000000` and its alias,
+    an objdump sweep and Ghidra's references find no other address but the
+    clear's own end, only constants (the double FLT_MAX's high word,
+    `GNUC`, 2^31 as a float, a decimal limit). In digikit's emulator, no page of the area or its
+    alias is ever touched (digikit maps a page on its first access), in
+    any rung of a cold boot to 400M instructions or in a session from
+    400M to 800M with 32 key presses and 7 encoder turns, and write
+    watches over all of it saw nothing in either run.
+  - SRAM `0x8000f980-0x80010000` (1,664 bytes): past the highest array
+    (17 rows of 404 bytes from `0x8000dea4`, to `0x8000f978`), named by no
+    decoded instruction, and written only by the reset's zeroing in the
+    same runs. The first 32 KB has no free block: code uses it up to
+    `0x80008000`.
+- **Not checked yet:** the version a unit reports (on the Digitakt II, the
+  container's); a cold boot of a build with mods; anything the
+  emulator does not reach (DSP audio, USB, Overbridge, sample and project
+  I/O on a filled +Drive).
+
 ## The Digitone mk1 and Digitone Keys (1.43)
 
 - **Files.** One `.syx` serves both. It is the Digitakt mk1's family (ELE3,
@@ -276,7 +391,11 @@ below was found again in 1.17.
 - **The packing format.** The loader repacks with the same codec
   (`codec/`). Check that the device's own depacker accepts it: every
   section must round-trip through `codec/elz.py`, and the in-place
-  simulation must hold for the device's `stage`.
+  simulation must hold for the device's `stage` and every one of its
+  `more_stages`. Look for a second loader (the Digitone II's section 4 has
+  one), and for a receive buffer in the OS's upgrade path that caps the
+  file (`receive_max`); `packer='dense'` packs tighter than aplib where
+  that cap needs it.
 - **Another CPU.** A decoder in `isa/` with `reader()`, `decode()` and the
   flags `ILLEGAL`, `LINEF`, `FPU`, `PCREL` and the flow constants.
 - **Tests.** Before anything is flashed:

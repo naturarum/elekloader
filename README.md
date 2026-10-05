@@ -21,6 +21,7 @@ file on your own machine, and you flash it the way you flash any OS update.
 | Digitakt (mk1) | 1.53, 1.54 | supported |
 | Digitakt II | 1.17 | experimental: whole builds (format-1 mods) and linkable mods with its own core (the hook bus's tick, draw, key and encoder events), sealed as the unit checks them; boots in digikit's emulator; core with a key-swap mod works on a unit (Transfer over USB) |
 | Digitone (mk1) and Digitone Keys | 1.43, 1.44 | supported |
+| Digitone II | 1.12 | experimental: whole builds (format-1 mods) only, no core yet; sealed as the unit checks them; checked against both of the unit's loaders and its 2 MiB upgrade buffer; a no-mod build boots in digikit's emulator; not yet run on a unit |
 | Octatrack (MKI and MKII) | 1.40C | supported: whole builds (format-1 mods); linkable mods with its own core: boots on an MKII, not yet run on an MKI |
 | other Elektron devices | | planned: see [docs/DEVICES.md](docs/DEVICES.md) |
 
@@ -121,7 +122,7 @@ file you chose last are kept in `%APPDATA%\elekloader` (Windows) or
 
 Send the `.syx` to the unit the way Elektron describes for OS updates
 ([How to update your device](https://support.elektron.se/support/solutions/articles/43000662890-how-to-update-your-device)).
-For the Digitakt mk1, the Digitakt II and the Digitone mk1:
+For the Digitakt mk1, the Digitakt II, the Digitone mk1 and the Digitone II:
 1. Connect it over USB and open Elektron Transfer.
 2. Select the unit and **Connect**.
 3. Drag the `.syx` onto **Drop files here**.
@@ -138,10 +139,10 @@ For the Octatrack, from the card (back it up first):
 
 **Recovery:** the bootloader is never changed, so the stock OS file always
 restores the unit. If a custom OS will not start on a Digitakt mk1, a
-Digitakt II or a Digitone mk1, hold **FUNC** while powering on for the
-startup menu, and press **TRIG 4** for OS UPGRADE.
+Digitakt II, a Digitone mk1 or a Digitone II, hold **FUNC** while powering
+on for the startup menu, and press **TRIG 4** for OS UPGRADE.
 Then send the stock `.syx` with Transfer's legacy OS upgrade mode (on the
-Digitakt II, over its MIDI ports: not USB). On the
+Digitakt II and the Digitone II, over 5-pin DIN MIDI: not USB). On the
 Octatrack: hold **FUNC** while powering on, press **TRIG 3** for MIDI
 UPGRADE, and send the stock `.syx` over 5-pin DIN MIDI (USB MIDI does not
 work for this).

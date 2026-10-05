@@ -165,6 +165,121 @@ def test_inplace_depack_gap():
     assert img == body and gap > 0
 
 
+def _dense_cases():
+    rnd = random.Random(4)
+    text = b''.join(b'%s: move.l d%d,-(sp)\n' % (w, rnd.randrange(8))
+                    for w in (b'push', b'save', b'keep') * 500)
+    far = bytes(rnd.getrandbits(8) for _ in range(5000))
+    return [b'', b'A', b'AB', b'AAA', bytes(range(256)) * 3, b'\x00' * 5000,
+            bytes(rnd.getrandbits(8) for _ in range(3000)), text,
+            far + b'between' + far[:300] + far[1000:1400] + far[:300],   # offsets past 3328
+            b'\x00' * 9000 + b'x' + b'\x00' * 9000]                      # matches past 4 KB
+
+
+def test_dense_packer_round_trip():
+    """codec/dense.py: every stream depacks to its input through codec/elz.py
+    (the decoder that matches the units' depacker), and it is denser than
+    codec/aplib.py where there is something to find."""
+    from elekloader.codec import dense
+    for data in _dense_cases():
+        packed, least = dense.pack_section(data)
+        assert least is None and syx.classify(packed) == 'packed'
+        assert elz.depack_section(packed) == data, len(data)
+    text = _dense_cases()[7]
+    assert len(dense.pack_section(text)[0]) < len(aplib.pack_section(text))
+
+
+def test_dense_floor_keeps_the_inplace_gap():
+    """With a floor, dense.py keeps the in-place gap above `reserve` where the
+    plain stream would overwrite unread input, and reports the gap
+    syx.inplace_depack measures."""
+    from dataclasses import replace
+    from elekloader.codec import dense
+    dev = devices.devices()[0]
+    body = bytes(random.Random(5).getrandbits(8) for _ in range(4000)) + b'\x00' * 60000
+    near = replace(dev, stage=dev.main_load + 0x100)
+    plain = dense.pack_section(body)[0]
+    assert syx.inplace_depack(plain, near)[1] <= 0            # the hazard, without a floor
+    for reserve in (0, 200):
+        packed, least = dense.pack_section(body, 0x100, reserve)
+        img, gap = syx.inplace_depack(packed, near)
+        assert img == body and gap == least and gap > reserve, (reserve, gap)
+        assert elz.depack_section(packed) == body
+    try:                    # a floor above where the stream starts cannot be kept: refused
+        dense.pack_section(body, 0x100, 0x200)
+    except dense.FloorError:
+        pass
+    else:
+        raise AssertionError('kept a floor above the starting distance')
+
+
+def _stock_like(body, dev):
+    """-> (Syx, raw) of a synthetic mk1-shaped file whose main OS is `body`."""
+    cont = _container([(5, 0, b'meta'), (3, dev.main_load, aplib.pack_section(body)),
+                       (4, 0x80000400, struct.pack('>II', 16, 0) + bytes(range(1, 17)))])
+    stream = struct.pack('>II', len(cont), transport.content_checksum(cont)) + cont
+    raw = transport.encode_syx(stream, 0x0A, FRAMING0, FRAMING1)
+    return syx.Syx(raw), raw
+
+
+def _refused(fn, *words):
+    try:
+        fn()
+    except syx.SyxError as e:
+        assert all(w in str(e) for w in words), e
+        return
+    raise AssertionError('not refused')
+
+
+def test_verify_checks_the_inplace_gap_at_every_stage():
+    """A second loader's stage (Device.more_stages) gets the same check as
+    `stage`: refused where it would overwrite unread input, passed where not."""
+    from dataclasses import replace
+    dev = devices.devices()[0]
+    body = bytes(random.Random(6).getrandbits(8) for _ in range(2000)) + b'\x00' * 20000
+    st, raw = _stock_like(body, dev)
+    syx.verify(raw, st, body, dev)                              # one stage: passes
+    tight = replace(dev, more_stages=((dev.main_load + 0x100, 'a test loader'),))
+    _refused(lambda: syx.verify(raw, st, body, tight), 'from 0x40000500', 'overwrites unread')
+    roomy = replace(dev, more_stages=((dev.main_load + 0x10000, 'a test loader'),))
+    f = syx.verify(raw, st, body, roomy)
+    gaps = f['main']['inplace_gaps']
+    assert sorted(gaps) == ['0x40010400', '0x40200000'] and f['main']['inplace_min_gap'] == \
+        gaps['0x40010400'] > 0
+    assert gaps['0x40200000'] - gaps['0x40010400'] == 0x40200000 - 0x40010400
+
+
+def test_verify_checks_the_receive_buffer():
+    """receive_max: the decoded stream, in whole 101-byte chunks, must fit."""
+    from dataclasses import replace
+    dev = devices.devices()[0]
+    body = b'a small main os ' * 500
+    st, raw = _stock_like(body, dev)
+    need = len(st.data) * syx.CHUNK
+    _refused(lambda: syx.verify(raw, st, body, replace(dev, receive_max=need - 1)),
+             'receive buffer')
+    f = syx.verify(raw, st, body, replace(dev, receive_max=need))
+    assert f['received'] == need and f['receive_headroom'] == 0
+    assert 'received' not in syx.verify(raw, st, body, dev)     # no limit: nothing to report
+
+
+def test_the_dense_packer_keeps_every_stage():
+    """packer 'dense' packs with its floor at the lowest stage: the build
+    passes a stage where the aPLib-shaped stream of the same image fails."""
+    from dataclasses import replace
+    dev = devices.devices()[0]
+    body = bytes(random.Random(7).getrandbits(8) for _ in range(2000)) + b'\x00' * 20000
+    st, raw = _stock_like(body, dev)
+    tight = replace(dev, more_stages=((dev.main_load + 0x100, 'a test loader'),))
+    assert tight.stages() == (0x40200000, 0x40000500) and replace(dev, stage=None).stages() == ()
+    _refused(lambda: syx.verify(syx.write(st, syx.pack_main(body), tight), st, body, tight),
+             'overwrites unread')
+    stored = syx.pack_main(body, replace(tight, packer='dense'))
+    f = syx.verify(syx.write(st, stored, tight), st, body, tight)
+    assert f['main']['inplace_gaps']['0x40000500'] > 0
+    _refused(lambda: syx.pack_main(body, replace(dev, packer='lz4')), 'no packer')
+
+
 def test_overlaps():
     spans = [(0, 100, 'a'), (10, 20, 'b'), (50, 60, 'c'), (100, 110, 'd')]
     pairs = {(a[2], b[2]) for a, b in elemod.overlaps(spans)}

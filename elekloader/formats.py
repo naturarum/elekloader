@@ -90,7 +90,14 @@ def check_version(dev, version):
         raise FormatError('the version is 1 to %d ASCII characters' % dev.version_len)
 
 
-def pack_main(image):
+def pack_main(image, dev=None):
+    """-> the main OS's stored section: the device's packer (syx.pack_main) for
+    an ELE3 device, else the aPLib-shaped one."""
+    if dev is not None and dev.container == 'ele3':
+        try:
+            return syx.pack_main(image, dev)
+        except syx.SyxError as e:
+            raise FormatError(str(e))
     return aplib.pack_section(bytes(image))
 
 
