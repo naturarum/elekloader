@@ -1,0 +1,304 @@
+{
+ "id": "fx-page2",
+ "version": "0.1",
+ "title": "Second chorus page (UI test)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "Adds a fourth page to the SEND FX view (FUNC+FX, then DOWN past the chorus) with 8 new knobs whose values go to unused FX-setup words. UI only: the DSP never sees them, and the 8 knobs borrow descriptor rows that carry MIDI CCs in stock. A test of the multi-page mechanism; emulator-tested only.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "fxpage2.c",
+  "pagerec.s"
+ ],
+ "subscribe": [
+  {
+   "event": "ev_tick",
+   "fn": "fx2_tick",
+   "order": 55
+  }
+ ],
+ "sites": [
+  {
+   "addr": "0x401f83e0",
+   "stock": "ffffffffffffffff0000000000000000000000000000000100010021ffffffff0000000100000000",
+   "op": "bytes",
+   "new": "000000100000004600000000000006000000000000000000ffffffffffffffff0000000100000000"
+  },
+  {
+   "addr": "0x401f8408",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l0"
+  },
+  {
+   "addr": "0x401f840c",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f8410",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s0"
+  },
+  {
+   "addr": "0x401f8414",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3610"
+  },
+  {
+   "addr": "0x401f841c",
+   "stock": "ffffffffffffffff0000000000000000000000000000000100020022ffffffff0000000200000000",
+   "op": "bytes",
+   "new": "00000010000000470000000000007f000000400000000000ffffffffffffffff0000000200000000"
+  },
+  {
+   "addr": "0x401f8444",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l1"
+  },
+  {
+   "addr": "0x401f8448",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f844c",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s1"
+  },
+  {
+   "addr": "0x401f8450",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3030"
+  },
+  {
+   "addr": "0x401f8458",
+   "stock": "ffffffffffffffff0000000000000000000000000000000100060026ffffffff0000000300000000",
+   "op": "bytes",
+   "new": "00000010000000480000000000007f000000400000000000ffffffffffffffff0000000300000000"
+  },
+  {
+   "addr": "0x401f8480",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l2"
+  },
+  {
+   "addr": "0x401f8484",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f8488",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s2"
+  },
+  {
+   "addr": "0x401f848c",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3030"
+  },
+  {
+   "addr": "0x401f8494",
+   "stock": "ffffffffffffffff000000000000000000000000000000000007ffffffffffff0000000400000000",
+   "op": "bytes",
+   "new": "00000010000000490000000000007f000000400000000000ffffffffffffffff0000000400000000"
+  },
+  {
+   "addr": "0x401f84bc",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l3"
+  },
+  {
+   "addr": "0x401f84c0",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f84c4",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s3"
+  },
+  {
+   "addr": "0x401f84c8",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3030"
+  },
+  {
+   "addr": "0x401f84d0",
+   "stock": "ffffffffffffffff00000000000000000000000000000000000affffffffffff0000000500000000",
+   "op": "bytes",
+   "new": "000000100000004a0000000000007f000000400000000000ffffffffffffffff0000000500000000"
+  },
+  {
+   "addr": "0x401f84f8",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l4"
+  },
+  {
+   "addr": "0x401f84fc",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f8500",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s4"
+  },
+  {
+   "addr": "0x401f8504",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3030"
+  },
+  {
+   "addr": "0x401f8638",
+   "stock": "ffffffffffffffff0000000000000000000000000000000100630062ffffffff0000000b00000000",
+   "op": "bytes",
+   "new": "000000100000004b0000000000007f000000400000000000ffffffffffffffff0000000b00000000"
+  },
+  {
+   "addr": "0x401f8660",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l5"
+  },
+  {
+   "addr": "0x401f8664",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f8668",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s5"
+  },
+  {
+   "addr": "0x401f866c",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3030"
+  },
+  {
+   "addr": "0x401f8674",
+   "stock": "ffffffffffffffff000000000000000000000000000000000078ffffffffffff0000000c00000000",
+   "op": "bytes",
+   "new": "000000100000004c0000000000007f000000400000000000ffffffffffffffff0000000c00000000"
+  },
+  {
+   "addr": "0x401f869c",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l6"
+  },
+  {
+   "addr": "0x401f86a0",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f86a4",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s6"
+  },
+  {
+   "addr": "0x401f86a8",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3030"
+  },
+  {
+   "addr": "0x401f86b0",
+   "stock": "ffffffffffffffff000000000000000000000000000000000079ffffffffffff0000000d00000000",
+   "op": "bytes",
+   "new": "000000100000004d0000000000007f000000400000000000ffffffffffffffff0000000d00000000"
+  },
+  {
+   "addr": "0x401f86d8",
+   "stock": "402151f0",
+   "op": "ptr",
+   "target": "fx2_l7"
+  },
+  {
+   "addr": "0x401f86dc",
+   "stock": "40218a2a",
+   "op": "ptr",
+   "target": "fx2_g"
+  },
+  {
+   "addr": "0x401f86e0",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "fx2_s7"
+  },
+  {
+   "addr": "0x401f86e4",
+   "stock": "400e305a",
+   "op": "bytes",
+   "new": "400e3030"
+  },
+  {
+   "addr": "0x40061616",
+   "stock": "7203",
+   "op": "bytes",
+   "new": "7204",
+   "kind": "code"
+  },
+  {
+   "addr": "0x40061624",
+   "stock": "203c401e0448",
+   "op": "keep2",
+   "target": "fx2_pages"
+  },
+  {
+   "addr": "0x400c25d8",
+   "stock": "7224202f0004",
+   "op": "jmp",
+   "target": "fx2_pagerec"
+  },
+  {
+   "addr": "0x4006f710",
+   "stock": "206800884e90",
+   "op": "jsr",
+   "target": "fx2_baseid"
+  },
+  {
+   "addr": "0x4006f8e0",
+   "stock": "206800884e90",
+   "op": "jsr",
+   "target": "fx2_baseid"
+  },
+  {
+   "addr": "0x4006f4d0",
+   "stock": "206800884e90",
+   "op": "jsr",
+   "target": "fx2_baseid"
+  }
+ ],
+ "requires": [
+  "core"
+ ]
+}

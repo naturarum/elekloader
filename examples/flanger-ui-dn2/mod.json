@@ -1,0 +1,186 @@
+{
+ "id": "flanger-ui",
+ "version": "0.1",
+ "title": "Flanger page (UI test)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "Renames the chorus page and every chorus send to a flanger and redraws three glyphs (the send, and the page's knobs C and D as FDBK and TIME). UI only: the DSP still runs the stock chorus. A test of how the Digitone II draws its pages; emulator-tested only.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "flanger_ui.c"
+ ],
+ "subscribe": [
+  {
+   "event": "ev_tick",
+   "fn": "flui_tick",
+   "order": 50
+  }
+ ],
+ "exports": [
+  "flui_state",
+  "flui_ticks"
+ ],
+ "sites": [
+  {
+   "addr": "0x401f9380",
+   "stock": "40210bcf",
+   "op": "ptr",
+   "target": "flui_send"
+  },
+  {
+   "addr": "0x401f9388",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "flui_send_s"
+  },
+  {
+   "addr": "0x401f9dd0",
+   "stock": "4021c061",
+   "op": "ptr",
+   "target": "flui_mix"
+  },
+  {
+   "addr": "0x401f9dd8",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "flui_send_s"
+  },
+  {
+   "addr": "0x401fa460",
+   "stock": "40210bcc",
+   "op": "ptr",
+   "target": "flui_in"
+  },
+  {
+   "addr": "0x401fa468",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "flui_send_s"
+  },
+  {
+   "addr": "0x401fa49c",
+   "stock": "40210c22",
+   "op": "ptr",
+   "target": "flui_in_l"
+  },
+  {
+   "addr": "0x401fa4a4",
+   "stock": "40210c33",
+   "op": "ptr",
+   "target": "flui_in_l_s"
+  },
+  {
+   "addr": "0x401fa4d8",
+   "stock": "40210c38",
+   "op": "ptr",
+   "target": "flui_in_r"
+  },
+  {
+   "addr": "0x401fa4e0",
+   "stock": "40210c49",
+   "op": "ptr",
+   "target": "flui_in_r_s"
+  },
+  {
+   "addr": "0x401f9ce0",
+   "stock": "40210aa2",
+   "op": "ptr",
+   "target": "flui_fdbk"
+  },
+  {
+   "addr": "0x401f9ce8",
+   "stock": "40210af8",
+   "op": "ptr",
+   "target": "flui_fdbk_s"
+  },
+  {
+   "addr": "0x401f9d1c",
+   "stock": "4021c50b",
+   "op": "ptr",
+   "target": "flui_time"
+  },
+  {
+   "addr": "0x401f9d24",
+   "stock": "40210a1b",
+   "op": "ptr",
+   "target": "flui_time_s"
+  },
+  {
+   "addr": "0x401f9c6c",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x401f9ca8",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x401f9ce4",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x401f9d20",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x401f9d5c",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x401f9d98",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x401f9dd4",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x401f9e10",
+   "stock": "40210a96",
+   "op": "ptr",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x400ca018",
+   "stock": "487940210a96",
+   "op": "keep2",
+   "target": "flui_title"
+  },
+  {
+   "addr": "0x400c9fba",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "flui_box"
+  },
+  {
+   "addr": "0x4006f4f8",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "flui_box"
+  },
+  {
+   "addr": "0x401f7b30",
+   "stock": "40211156",
+   "op": "ptr",
+   "target": "flui_send_s"
+  }
+ ],
+ "requires": [
+  "core"
+ ]
+}
