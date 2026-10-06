@@ -44,8 +44,7 @@ evidence; tests/test_digitone2.py checks each fact against the stock file.
   0x80000000 and 0x40305000-0x4030c980 to 0x80008000 (both all zeros in
   the image), zeroes 0x8000f980-0x80010000, clears DDR 0x402fd000-
   0x466b84d0, and runs its stack down from 0x48000000.
-- Free at run time (areas; no core yet, so ddr and sram_code are not set
-  and format-2 mods are refused):
+- Free at run time (docs/DEVICES.md has the evidence):
   - DDR 0x46800000-0x47F00000: above the clear's end and the DMA buffers
     (named only through the uncached alias, 0x4e6c0000-0x4e709340), below
     the boot stack's 1 MB. Above those buffers, no decoded instruction
@@ -59,6 +58,16 @@ evidence; tests/test_digitone2.py checks each fact against the stock file.
     highest array, 17 rows of 404 bytes from 0x8000dea4, ends at
     0x8000f978), zeroed by the reset, named by no decoded instruction, and
     written by nothing else in the same runs.
+  The linker's DDR (`ddr`, for core-dn2 and every format-2 mod's .run,
+  tables and .bss) is the top megabyte of it, 0x47E00000-0x47F00000; areas
+  keep the rest (0x46800000-0x47E00000) for regions mods claim, so a region
+  can never overlap the linker's. .fast code goes to the SRAM tail; core-dn2
+  declares its copy table, core_fast, and copies it on the first ev_tick
+  (mods/core/fast.s), after the reset has zeroed that tail.
+- The core (mods/core-dn2): the Digitakt II core's sites, found again by
+  their code (the same instructions with the addresses masked; every routine
+  it calls is the Digitakt II's whole), plus the two MIDI events, which are
+  the Digitone II's own.
 - Protected: the panel's firmware and the code that sends it (it runs on
   every normal boot, and the STARTUP menu needs the panel), the SPI NOR
   driver, and the in-OS upgrade writer, which has no length clamp.
@@ -99,9 +108,12 @@ DEVICE = Device(
                                  'from 0x80000, no length clamp)'),
     ),
     areas={
-        'ddr': (0x46800000, 0x47F00000),          # above the DMA buffers, below the boot stack
+        'ddr': (0x46800000, 0x47E00000),          # above the DMA buffers; the top MB is core's
         'sram-tail': (0x8000F980, 0x80010000),    # the SRAM's zeroed tail
     },
+    ddr=(0x47E00000, 0x47F00000),                 # core-dn2's .run, tables and .bss (linker)
+    sram_code=(0x8000F980, 0x80010000),           # .fast code, copied by core-dn2 (fast.s)
+    fast_table='core_fast',
     recovery=('hold FUNC while powering on for the STARTUP menu, press TRIG 4 (OS UPGRADE), '
               'then send the stock .syx over DIN MIDI with Elektron Transfer (not USB: the '
               'bootstrap has no USB)'),

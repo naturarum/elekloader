@@ -36,8 +36,8 @@ monolithic build; section 4 says how to go from A to B.
   source (with `settings.s`, `render.s` and `fast.s` where the device
   uses them); `mods/core` builds it for the Digitakt mk1
   (`python -m elekloader.sdk.build mods/core --stock Digitakt_OS1.53.syx`),
-  `mods/core-dn1` for the Digitone mk1 and `mods/core-dt2` for the
-  Digitakt II. The Octatrack's core, `mods/core-ot`, has a hook bus of
+  `mods/core-dn1` for the Digitone mk1, `mods/core-dt2` for the
+  Digitakt II and `mods/core-dn2` for the Digitone II. The Octatrack's core, `mods/core-ot`, has a hook bus of
   its own from 0.2, with the Octatrack's events ("The hook bus on the
   Octatrack" below).
 
@@ -88,7 +88,7 @@ what you see when it is broken (section 5 has the fixes).
 12. **One file, one release.** A mod targets one stock release by hash.
     Porting to another OS version means finding every address again.
 
-### The hook bus (core's events): the Digitakt mk1, the Digitone mk1 and the Digitakt II
+### The hook bus (core's events): the Digitakt mk1, the Digitone mk1, the Digitakt II and the Digitone II
 
 Handlers are C functions (arguments on the stack; d0-d1/a0-a1 free,
 everything else kept; the result in d0). `order` sorts handlers of one
@@ -105,11 +105,15 @@ event (lower first; the shipped mods use 10-90).
 | `ev_render_out` | audio render exit | `void f(void)` | the same |
 | `ev_hold` | Digitone mk1 only (core-dn1 2.2): a track key held on its own, UI task | `int f(void *brain, void *event, int track)` | return nonzero to take it; when none does, core opens the Mod Menu ("The Mod Menu" below) |
 | `ev_personalize` | Digitakt II only (core-dt2): SETTINGS > PERSONALIZE is built | `void f(void *menu)` | add a row with `core_additem(menu, row)`, after TRK SELECT; a row redraws the menu with `View::invalidate(menu + 0x38)`, as from SETTINGS; a checkbox is drawn as mods/core-dt2/README.md describes |
+| `ev_midi_step` | Digitone II only (core-dn2): the sequencer built a MIDI-machine track's trig, interrupt level | `void f(void *vev, int track, int step, void *pattern, void *kit)` | `vev` is the voice event the sequencer schedules next; the MIDI event is the long at `vev + 0x18` (its fields: mods/core-dn2/midi.s). Keep it short; `.run` code only |
+| `ev_midi_note` | Digitone II only (core-dn2): the MIDI task is about to send a note-on | `void f(struct core_midi_note *n)`, `{int track, chan, note, vel, len; void *event;}` | what the handler leaves in `n` is what is sent, and the note-off the task books uses the same note; a note outside 0..127 is not sent. Live notes come here too (`event + 0x34` is 2; 1 for the sequencer), but their note-off comes from the key, not from here. `.run` code only |
 | `ev_voice_on` | Digitone mk1 only (core-dn1 2.1): a voice starts a note, in the render | `void f(int voice, int track, void *event)` | interrupt level. The voice's pitch word (`0x41391f80` + 4 x voice, the note << 16) is already written and may be changed: the render reads it every block. The voice's sound and the step's locks load after this, so read the voice's parameters from `ev_render_out` |
 
 The events, their prototypes and their conventions are the same on every
 device; only the sites differ, and `ev_voice_on` exists on the Digitone
-only. The Digitakt II's core (mods/core-dt2 1.0) has `ev_tick`, `ev_draw`,
+mk1 only, `ev_midi_step` and `ev_midi_note` on the Digitone II only. The
+Digitone II's core (mods/core-dn2 0.1, experimental) has the Digitakt II
+core's events plus those two, and copies `.fast` code the same way. The Digitakt II's core (mods/core-dt2 1.0) has `ev_tick`, `ev_draw`,
 `ev_key`, `ev_enc`, `ev_settings` and its own `ev_personalize`, and no
 render events: its audio
 renders on the DSP. It copies `.fast` code into SRAM itself, on the first
@@ -124,7 +128,10 @@ the tick site runs first). The sites core owns (do not patch them):
 - Digitone mk1 1.44: the same, but 0x40072a54, 0x4009d128 and 0x4009e53c
   for the last three of the eight, and 0x4009e948;
 - Digitakt II 1.17: 0x40000538, 0x40032ad4, 0x40032b3a, 0x40033d94,
-  0x40033dde, 0x400a5eac, 0x4009e2a2.
+  0x40033dde, 0x400a5eac, 0x4009e2a2;
+- Digitone II 1.12 (core-dn2 0.1): 0x40000538, 0x4002e464, 0x4002e4ca,
+  0x4002f20c, 0x4002f256, 0x4009ff88, 0x400987a2, and its MIDI events'
+  0x400da0b2, 0x400d9230 and 0x4012b490.
 
 A firmware routine your mod calls has its own address on each device and
 each OS version: look it up for the release you target, and build one

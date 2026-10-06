@@ -1,0 +1,18 @@
+{
+ "id": "midi-hooktest",
+ "version": "0.1",
+ "title": "MIDI hook test",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "A test of core's two Digitone II MIDI events: every MIDI note the sequencer sends goes out an octave up, with its velocity set to its trig's step number. Not for keeping: it makes the hooks easy to see on MIDI out.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": ["hooktest.c"],
+ "subscribe": [
+  {"event": "ev_midi_step", "fn": "hooktest_step", "order": 50},
+  {"event": "ev_midi_note", "fn": "hooktest_note", "order": 50}
+ ],
+ "exports": ["hooktest_steps", "hooktest_notes", "hooktest_tagged"],
+ "requires": ["core"]
+}

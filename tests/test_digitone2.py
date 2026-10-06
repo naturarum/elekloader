@@ -244,10 +244,13 @@ def test_whole_build_data_site_and_blob():
     assert set(gaps) == {'0x40400000', '0x40200000'} and min(gaps.values()) > 0
 
 
-def test_linkable_mods_wait_for_a_core():
-    """No core for the Digitone II yet: format-2 mods are refused, whole
-    builds (format 1) are not."""
-    assert not DEV.linkable() and DEV.ddr == (0, 0) and not DEV.fast_table
+def test_linkable_mods_need_the_digitone_ii_core():
+    """The Digitone II links format-2 mods in the top megabyte of its free DDR,
+    with its own core (mods/core-dn2), which declares and copies core_fast."""
+    assert DEV.linkable() and DEV.ddr == (0x47E00000, 0x47F00000)
+    assert DEV.sram_code == DEV.areas['sram-tail'] and DEV.fast_table == 'core_fast'
+    lo, hi = DEV.areas['ddr']
+    assert hi <= DEV.ddr[0] or DEV.ddr[1] <= lo          # no region can overlap the linker's
     addr, new = a_string_site()
     st, img = stock()
     o = addr - DEV.main_load
@@ -256,7 +259,65 @@ def test_linkable_mods_wait_for_a_core():
            'sites': [{'addr': '0x%08x' % addr, 'len': len(new), 'kind': 'data',
                       'stock_sha256': sha(img[o:o + len(new)]), 'new': new.hex()}]}
     problems = link.check([link.Mod2(doc, 'x')], img)
-    assert any('no linkable (format-2) mods yet' in p for p in problems), problems
+    assert any('requires core' in p for p in problems), problems
+
+
+def built(moddir, tmp):
+    """-> the .elemod mod.json in `moddir` builds to (needs the cross toolchain)."""
+    import shutil
+    from elekloader.sdk import build
+    need(SYX)
+    if not shutil.which(os.environ.get('ELEKLOADER_CROSS', DEV.toolchain['prefix']) + 'as'):
+        raise Skip('no cross assembler (ELEKLOADER_CROSS)')
+    return build.build(os.path.join(os.path.dirname(HERE), moddir), SYX, tmp)[0]
+
+
+# core-dn2's sites and their stock bytes: the Digitakt II core's six and its boot site, found
+# again, and the three MIDI sites (two for ev_midi_step, one for ev_midi_note)
+CORE_SITES = ((0x40000538, '4eb9400019b0'), (0x4002e464, '4eb94011d5d4'),
+              (0x4002e4ca, '4eb94011d60a'), (0x4002f20c, '4eb94002c5c8'),
+              (0x4002f256, '4eb94002c55c'), (0x4009ff88, '205248780002'),
+              (0x400987a2, '4cef7c7c0018'), (0x400da0b2, '2f024ebaec08'),
+              (0x400d9230, '2f024ebafa8a'), (0x4012b490, '727fc2802841'))
+
+
+def test_core_builds_links_and_verifies():
+    """mods/core-dn2 built with the SDK, then a build with it alone: its ten
+    sites, and nothing else in the image changed; both stages keep a gap."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core], version='DC03', log=lambda *a: None)
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    changed = [i for i in range(len(img)) if new[i] != img[i]]
+    for site, stock_bytes in CORE_SITES:
+        a = site - DEV.main_load
+        assert img[a:a + 6].hex() == stock_bytes, hex(site)
+        assert new[a:a + 2] in (b'\x4e\xb9', b'\x4e\xf9') and new[a:a + 6] != img[a:a + 6], hex(site)
+    sites = [s - DEV.main_load for s, _ in CORE_SITES]
+    assert all(any(s <= i < s + 6 for s in sites) for i in changed), [hex(DEV.main_load + i)
+                                                                      for i in changed[:8]]
+    assert man['link']['layout']['ddr'][0] == DEV.ddr[0]
+    gaps = man['output']['main']['inplace_gaps']
+    assert set(gaps) == {'0x40400000', '0x40200000'} and min(gaps.values()) > 0
+
+
+def test_the_examples_link_with_core():
+    """examples/hello-marker-dn2 (ev_draw) and examples/midi-hooktest-dn2
+    (ev_midi_step, ev_midi_note), each with core: no sites of their own."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        hello = built(os.path.join('examples', 'hello-marker-dn2'), tmp)
+        midi = built(os.path.join('examples', 'midi-hooktest-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core, hello, midi], version='DC04', log=lambda *a: None)
+    tables = man['link']['tables']
+    assert tables['ev_draw']['entries'] == 1
+    assert tables['ev_midi_step']['entries'] == 1 and tables['ev_midi_note']['entries'] == 1
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    changed = {i for i in range(len(img)) if new[i] != img[i]}
+    sites = {s - DEV.main_load + k for s, _ in CORE_SITES for k in range(6)}
+    assert changed <= sites
 
 
 # ---- protected ranges -------------------------------------------------------------------------

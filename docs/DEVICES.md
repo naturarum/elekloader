@@ -164,8 +164,9 @@ below was found again in 1.17.
 
 ## The Digitone II (1.12)
 
-Experimental: whole builds (format-1 mods) only, since it has no core yet
-(format-2 mods are refused). Not yet run on a unit. Each fact below was
+Experimental: whole builds (format-1 mods), and from core-dn2 0.1
+(mods/core-dn2) linkable mods, checked in digikit's emulator only. Not yet
+run on a unit. Each fact below was
 found again in 1.12 with the Digitakt II's as the map, and
 tests/test_digitone2.py checks each one against the stock file.
 
@@ -253,7 +254,7 @@ tests/test_digitone2.py checks each one against the stock file.
   - clears DDR `0x402fd000-0x466b84d0`, from inside the image's end, so a
     blob appended there is cleared too unless something copies it first;
   - runs its stack down from `0x48000000`.
-- **Free memory** (`areas`; `ddr` and `sram_code` wait for a core):
+- **Free memory** (`areas`, `ddr`, `sram_code`):
   - DDR `0x46800000-0x47F00000`. Above the clear, the code names only the
     DMA buffers, all through the uncached alias, up to `0x4e709340`
     (`0x46709340` cached). Over `0x466b84d0-0x48000000` and its alias,
@@ -269,8 +270,25 @@ tests/test_digitone2.py checks each one against the stock file.
     decoded instruction, and written only by the reset's zeroing in the
     same runs. The first 32 KB has no free block: code uses it up to
     `0x80008000`.
+  The linker's `ddr` is the top megabyte of the DDR area,
+  `0x47E00000-0x47F00000`; `areas['ddr']` keeps the rest
+  (`0x46800000-0x47E00000`) for regions mods claim, so a region cannot
+  overlap the linker's memory. `sram_code` is the SRAM tail.
+- **The core** (mods/core-dn2 0.1). The Digitakt II core's boot site and
+  six event sites, found again in 1.12 by their code with the addresses
+  masked (each matched once; every routine core calls is the Digitakt
+  II's whole, instruction for instruction): boot `0x40000538`, `ev_tick`
+  `0x4002e464`, `ev_draw` `0x4002e4ca`, `ev_key` `0x4002f20c`, `ev_enc`
+  `0x4002f256`, `ev_settings` `0x4009ff88`, `ev_personalize` `0x400987a2`.
+  Two Digitone II events of its own: `ev_midi_step` (`0x400da0b2` in the
+  step handler and `0x400d9230` in the pending-step pass, both where the
+  sequencer builds a MIDI-machine track's event with `0x400d8cbe`) and
+  `ev_midi_note` (`0x4012b490`, in the MIDI task's note loop, before its
+  range check). No explicit branch and no switch case lands inside any of
+  the ten sites. Checked by cold boots in digikit's emulator (6 Oct 2026):
+  see mods/core-dn2/README.md.
 - **Not checked yet:** the version a unit reports (on the Digitakt II, the
-  container's); a cold boot of a build with mods; anything the
+  container's); a build with mods on a unit; anything the
   emulator does not reach (DSP audio, USB, Overbridge, sample and project
   I/O on a filled +Drive).
 
