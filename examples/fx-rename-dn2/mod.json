@@ -1,0 +1,193 @@
+{
+ "id": "fx-rename",
+ "version": "0.1",
+ "title": "Flanger and tape names (FTN1)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only, never run on a unit. For dn2-cfw's FTN1 build, whose DSP runs a flanger in the chorus slot and a tape delay in the delay slot: renames the chorus page and every chorus send to Flanger/FLG, and the delay page and every delay send to Tape/TAPE (the page box says TAP). Labels only: no new rows, knobs or glyphs, and every knob keeps its MIDI CC, storage and DSP frame word. On a stock DSP the names would be wrong.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "fx_rename.c"
+ ],
+ "sites": [
+  {
+   "addr": "0x400ca018",
+   "stock": "487940210a96",
+   "op": "keep2",
+   "target": "fxr_flanger"
+  },
+  {
+   "addr": "0x400c9fba",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "fxr_flg"
+  },
+  {
+   "addr": "0x4006f4f8",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "fxr_flg"
+  },
+  {
+   "addr": "0x401f9380",
+   "stock": "40210bcf",
+   "op": "ptr",
+   "target": "fxr_flg_send"
+  },
+  {
+   "addr": "0x401f9388",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fxr_flg"
+  },
+  {
+   "addr": "0x401f9dd0",
+   "stock": "4021c061",
+   "op": "ptr",
+   "target": "fxr_flg_mix"
+  },
+  {
+   "addr": "0x401f9dd8",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fxr_flg"
+  },
+  {
+   "addr": "0x401fa460",
+   "stock": "40210bcc",
+   "op": "ptr",
+   "target": "fxr_flg_in"
+  },
+  {
+   "addr": "0x401fa468",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fxr_flg"
+  },
+  {
+   "addr": "0x401fa49c",
+   "stock": "40210c22",
+   "op": "ptr",
+   "target": "fxr_flg_in_l"
+  },
+  {
+   "addr": "0x401fa4a4",
+   "stock": "40210c33",
+   "op": "ptr",
+   "target": "fxr_flg_l"
+  },
+  {
+   "addr": "0x401fa4d8",
+   "stock": "40210c38",
+   "op": "ptr",
+   "target": "fxr_flg_in_r"
+  },
+  {
+   "addr": "0x401fa4e0",
+   "stock": "40210c49",
+   "op": "ptr",
+   "target": "fxr_flg_r"
+  },
+  {
+   "addr": "0x400c9f34",
+   "stock": "487940210a10",
+   "op": "keep2",
+   "target": "fxr_tape"
+  },
+  {
+   "addr": "0x400c9ee6",
+   "stock": "487940210dd1",
+   "op": "keep2",
+   "target": "fxr_tap"
+  },
+  {
+   "addr": "0x4006f4f0",
+   "stock": "487940210dd1",
+   "op": "keep2",
+   "target": "fxr_tap"
+  },
+  {
+   "addr": "0x401f93bc",
+   "stock": "40210bde",
+   "op": "ptr",
+   "target": "fxr_tape_send"
+  },
+  {
+   "addr": "0x401f93c4",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxr_tape_s"
+  },
+  {
+   "addr": "0x401f9d58",
+   "stock": "40210bde",
+   "op": "ptr",
+   "target": "fxr_tape_send"
+  },
+  {
+   "addr": "0x401f9d60",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxr_tape_s"
+  },
+  {
+   "addr": "0x401f9fec",
+   "stock": "4021c071",
+   "op": "ptr",
+   "target": "fxr_tape_mix"
+  },
+  {
+   "addr": "0x401f9ff4",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxr_tape_s"
+  },
+  {
+   "addr": "0x401fa514",
+   "stock": "40210bdb",
+   "op": "ptr",
+   "target": "fxr_tape_in"
+  },
+  {
+   "addr": "0x401fa51c",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxr_tape_s"
+  },
+  {
+   "addr": "0x401fa550",
+   "stock": "40210c4e",
+   "op": "ptr",
+   "target": "fxr_tape_in_l"
+  },
+  {
+   "addr": "0x401fa558",
+   "stock": "40210c5e",
+   "op": "ptr",
+   "target": "fxr_tape_l"
+  },
+  {
+   "addr": "0x401fa58c",
+   "stock": "40210c63",
+   "op": "ptr",
+   "target": "fxr_tape_in_r"
+  },
+  {
+   "addr": "0x401fa594",
+   "stock": "40210c73",
+   "op": "ptr",
+   "target": "fxr_tape_r"
+  },
+  {
+   "addr": "0x401f7b38",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxr_tape_s"
+  }
+ ],
+ "requires": [
+  "core"
+ ]
+}

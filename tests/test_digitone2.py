@@ -320,6 +320,39 @@ def test_the_examples_link_with_core():
     assert changed <= sites
 
 
+def test_fx_rename_only_repoints_names():
+    """examples/fx-rename-dn2 with core: outside core's sites, only 4-byte pointers and `pea`
+    operands change, and each new pointer leads to a string in the mod's RAM image that the
+    linker placed at 0x47E00000 (the descriptor table's CC words and every other field stay)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        ren = built(os.path.join('examples', 'fx-rename-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core, ren], version='FTN0', log=lambda *a: None)
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    with open(os.path.join(os.path.dirname(HERE), 'examples', 'fx-rename-dn2', 'mod.json')) as fh:
+        doc = json.load(fh)
+    core_bytes = {s - DEV.main_load + k for s, _ in CORE_SITES for k in range(6)}
+    allowed = set(core_bytes)
+    lay = man['link']['layout']
+    run_lo, run_hi = lay['ddr']
+    run_img = new[lay['run_load'] - DEV.main_load:]
+    for s in doc['sites']:
+        a = int(s['addr'], 16) - DEV.main_load
+        assert s['op'] in ('ptr', 'keep2'), s
+        if s['op'] == 'keep2':
+            assert img[a:a + 2] == new[a:a + 2] == b'\x48\x79', s['addr']        # pea (abs).l
+            a += 2
+        allowed |= set(range(a, a + 4))
+        p = word(new, DEV.main_load + a)
+        assert run_lo <= p < run_hi, s['addr']
+        text = run_img[p - run_lo:p - run_lo + 24].split(b'\0')[0]
+        assert text and all(32 <= c < 127 for c in text), (s['addr'], text)
+    end = len(img)
+    changed = {i for i in range(end) if new[i] != img[i]}
+    assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
+
+
 # ---- protected ranges -------------------------------------------------------------------------
 
 def test_the_panel_firmware_range_is_what_the_updater_sends():
