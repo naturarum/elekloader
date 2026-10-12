@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* flanger-ui (Digitone II OS 1.12): the chorus page and the chorus sends, renamed and redrawn
  * as a flanger. UI only: the DSP still runs the stock chorus, and every knob still sends the
- * same frame word as before. A test of how the Digitone II draws its pages (Elektron-CFW
+ * same frame word as before. A test of how the Digitone II draws its pages (dn2-cfw (github.com/naturarum/dn2-cfw)
  * notes/T5.0-flanger-page-ui.md); emulator-tested only.
  *
  * Two mechanisms:

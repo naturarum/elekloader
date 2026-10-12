@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* fx-page2 (Digitone II OS 1.12): a second page for the chorus in the SEND FX view, with 8 new
  * knobs. UI test only: the 8 values live in FX-setup words 70-77, which no page and no DSP frame
- * word uses in stock 1.12 (Elektron-CFW notes/T5.0-flanger-page-ui.md, section 0); the DSP
+ * word uses in stock 1.12 (dn2-cfw (github.com/naturarum/dn2-cfw) notes/T5.0-flanger-page-ui.md, section 0); the DSP
  * never sees them. Emulator-tested only.
  *
  * How a send-FX page is made (all addresses 1.12):
