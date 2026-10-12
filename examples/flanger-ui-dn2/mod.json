@@ -5,7 +5,7 @@
  "category": "Examples",
  "license": "GPL-2.0-or-later",
  "author": "naturarum",
- "description": "Renames the chorus page and every chorus send to a flanger and redraws three glyphs (the send, and the page's knobs C and D as FDBK and TIME). UI only: the DSP still runs the stock chorus. A test of how the Digitone II draws its pages; emulator-tested only.",
+ "description": "EXPERIMENT: emulator-tested only, never run on a unit; the DSP still plays the stock chorus. Renames the chorus page and every chorus send to a flanger and redraws three glyphs (the send, and the page's knobs C and D as FDBK and TIME). UI only: the DSP still runs the stock chorus. A test of how the Digitone II draws its pages; emulator-tested only.",
  "device": "digitone-mk2",
  "os": "1.12",
  "sources": [

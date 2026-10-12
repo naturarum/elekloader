@@ -5,7 +5,7 @@
  "category": "Examples",
  "license": "GPL-2.0-or-later",
  "author": "naturarum",
- "description": "Adds a fourth page to the SEND FX view (FUNC+FX, then DOWN past the chorus) with 8 new knobs whose values go to unused FX-setup words. UI only: the DSP never sees them, and the 8 knobs borrow descriptor rows that carry MIDI CCs in stock. A test of the multi-page mechanism; emulator-tested only.",
+ "description": "EXPERIMENT, DO NOT FLASH: borrows 8 parameter rows that carry MIDI CCs 1, 2, 6, 7, 10, 99, 120 and 121 in stock, so it breaks those CCs on MIDI tracks. Emulator-tested only. Adds a fourth page to the SEND FX view (FUNC+FX, then DOWN past the chorus) with 8 new knobs whose values go to unused FX-setup words. UI only: the DSP never sees them, and the 8 knobs borrow descriptor rows that carry MIDI CCs in stock. A test of the multi-page mechanism; emulator-tested only.",
  "device": "digitone-mk2",
  "os": "1.12",
  "sources": [
