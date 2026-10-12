@@ -1,0 +1,21 @@
+{
+ "id": "param-rows",
+ "version": "0.1",
+ "title": "Rows for a 3-band compressor (GT01)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only, never run on a unit. Adds 17 parameter rows, through param-grow, for a 3-band master compressor that does not exist yet: per band (LOW, MID, HIGH) threshold, ratio, attack, release and makeup, and two crossovers. They are inert: on no page, with no MIDI CC or NRPN, never p-lockable, no randomiser, default 0, in FX slots 70..86 that no stock row uses and the stock storage does not keep. Nothing on the screen, in MIDI or in a saved project changes. For dn2-cfw's GT01 build.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": ["rows.c"],
+ "contribute": [
+  {"to": "param_rows", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:param_rows_comp", 0]]}
+ ],
+ "resources": {"names": ["param-row:0x141", "param-row:0x142", "param-row:0x143", "param-row:0x144",
+                         "param-row:0x145", "param-row:0x146", "param-row:0x147", "param-row:0x148",
+                         "param-row:0x149", "param-row:0x14a", "param-row:0x14b", "param-row:0x14c",
+                         "param-row:0x14d", "param-row:0x14e", "param-row:0x14f", "param-row:0x150",
+                         "param-row:0x151", "fx-k:70-86"]},
+ "requires": ["core", "param-grow"]
+}

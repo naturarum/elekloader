@@ -1,0 +1,1175 @@
+{
+ "id": "param-grow",
+ "version": "0.1",
+ "title": "Room for more parameter rows (GT00)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only, never run on a unit. Gives the parameter table room for 63 more rows (0x141 -> 0x180) and adds none: the table is copied to RAM at boot, before any of the OS's own code, and every instruction that holds its address or its row count is pointed at the copy; the MIDI CC/NRPN input cache and the display table follow the new count. The rows after the stock ones are copies of row 0, which is what the stock OS reads for any row id it clamps, so nothing on the screen, in MIDI or in a saved project changes. Other mods add rows through the table param_rows (grow.s says how). For dn2-cfw's GT00 build.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "grow.s"
+ ],
+ "collections": {
+  "param_rows": 4
+ },
+ "exports": [
+  "pg_desc",
+  "pg_xdisp",
+  "pg_xdisp_on"
+ ],
+ "resources": {
+  "names": [
+   "param-table"
+  ],
+  "regions": [
+   {
+    "name": "param-table",
+    "lo": "0x47D00000",
+    "hi": "0x47D10000"
+   }
+  ]
+ },
+ "requires": [
+  "core"
+ ],
+ "sites": [
+  {
+   "addr": "0x40000568",
+   "stock": "4eb940186fa2",
+   "op": "jsr",
+   "target": "pg_boot",
+   "note": "the OS entry's call into the C start: the table is built here"
+  },
+  {
+   "addr": "0x400174d6",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "40017428_FUN_40017428: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x400174de",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40017428_FUN_40017428: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400365d0",
+   "stock": "0c8100000141",
+   "op": "bytes",
+   "new": "0c8100000180",
+   "kind": "code",
+   "note": "400365c8_ParameterSet__vslot22: cmpi.l #0x141,D1 -> #0x180"
+  },
+  {
+   "addr": "0x400365e0",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400365c8_ParameterSet__vslot22: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400366aa",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "40036692_ParameterSet__vslot23: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x400366c2",
+   "stock": "d5fc401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40036692_ParameterSet__vslot23: adda.l #0x401f83a4,A2"
+  },
+  {
+   "addr": "0x40036af4",
+   "stock": "0c8400000140",
+   "op": "bytes",
+   "new": "0c840000017f",
+   "kind": "code",
+   "note": "40036adc_ParameterSet__vslot08: cmpi.l #0x140,D4 -> #0x17f"
+  },
+  {
+   "addr": "0x40036bbc",
+   "stock": "0c8200000140",
+   "op": "bytes",
+   "new": "0c820000017f",
+   "kind": "code",
+   "note": "40036bac_ParameterSet__vslot09: cmpi.l #0x140,D2 -> #0x17f"
+  },
+  {
+   "addr": "0x400372de",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400372da_FUN_400372da: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400372e6",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400372da_FUN_400372da: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x4003753a",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400374f6_SoundParameterSet__vslot26: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40037540",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400374f6_SoundParameterSet__vslot26: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400375dc",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4003759a_FxParameterSet__vslot26: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400375e2",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "4003759a_FxParameterSet__vslot26: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x40037690",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4003764c_MidiParameterSet__vslot26: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40037696",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "4003764c_MidiParameterSet__vslot26: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x40037736",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "400376f0_TrigParameterSet__vslot26: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x40037746",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400376f0_TrigParameterSet__vslot26: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400379ec",
+   "stock": "0c8200000140",
+   "op": "bytes",
+   "new": "0c820000017f",
+   "kind": "code",
+   "note": "400379dc_ParameterSet__vslot25: cmpi.l #0x140,D2 -> #0x17f"
+  },
+  {
+   "addr": "0x40038c0a",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40038bc6_SoundParameterSet__vslot27: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40038c10",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "40038bc6_SoundParameterSet__vslot27: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x40038cac",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40038c6a_FxParameterSet__vslot27: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40038cb2",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "40038c6a_FxParameterSet__vslot27: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x40038d58",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40038d14_TrigParameterSet__vslot27: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40038d5e",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "40038d14_TrigParameterSet__vslot27: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x40038e28",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40038de4_MidiParameterSet__vslot27: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40038e2e",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "40038de4_MidiParameterSet__vslot27: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x4003950a",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "400394be_FUN_400394be: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x400397a6",
+   "stock": "0c8200000140",
+   "op": "bytes",
+   "new": "0c820000017f",
+   "kind": "code",
+   "note": "40039756_ParameterSet__vslot07: cmpi.l #0x140,D2 -> #0x17f"
+  },
+  {
+   "addr": "0x400397be",
+   "stock": "d1fc401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40039756_ParameterSet__vslot07: adda.l #0x401f83a4,A0"
+  },
+  {
+   "addr": "0x40039ac8",
+   "stock": "45f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40039a98_SoundParameterSet__vslot08: lea (DAT_401f83a4).l,A2"
+  },
+  {
+   "addr": "0x40039cea",
+   "stock": "45f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40039cba_FxParameterSet__vslot08: lea (DAT_401f83a4).l,A2"
+  },
+  {
+   "addr": "0x40039ee8",
+   "stock": "45f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40039eb8_MidiParameterSet__vslot08: lea (DAT_401f83a4).l,A2"
+  },
+  {
+   "addr": "0x40044828",
+   "stock": "b3fc00000140",
+   "op": "bytes",
+   "new": "b3fc0000017f",
+   "kind": "code",
+   "note": "400446c2_FUN_400446c2: cmpa.l #0x140,A1 -> #0x17f"
+  },
+  {
+   "addr": "0x4004483c",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400446c2_FUN_400446c2: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x4004b0ca",
+   "stock": "47f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4004b0b4_FUN_4004b0b4: lea (DAT_401f83a4).l,A3"
+  },
+  {
+   "addr": "0x4004b17a",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "4004b0b4_FUN_4004b0b4: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x40062be8",
+   "stock": "0c8300000141",
+   "op": "bytes",
+   "new": "0c8300000180",
+   "kind": "code",
+   "note": "4006264a_MidiParameterPageView__vslot04: cmpi.l #0x141,D3 -> #0x180"
+  },
+  {
+   "addr": "0x40062bf0",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4006264a_MidiParameterPageView__vslot04: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40065ab8",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "40065a0c_ParameterPageView__vslot04: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x40065ac0",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40065a0c_ParameterPageView__vslot04: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400672de",
+   "stock": "0c8300000140",
+   "op": "bytes",
+   "new": "0c830000017f",
+   "kind": "code",
+   "note": "40067126_FUN_40067126: cmpi.l #0x140,D3 -> #0x17f"
+  },
+  {
+   "addr": "0x400672f2",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40067126_FUN_40067126: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400674d4",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "40067470_ParameterPageView__vslot17: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x400674e6",
+   "stock": "49f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40067470_ParameterPageView__vslot17: lea (DAT_401f83a4).l,A4"
+  },
+  {
+   "addr": "0x400676cc",
+   "stock": "0c8200000140",
+   "op": "bytes",
+   "new": "0c820000017f",
+   "kind": "code",
+   "note": "40067470_ParameterPageView__vslot17: cmpi.l #0x140,D2 -> #0x17f"
+  },
+  {
+   "addr": "0x400679c8",
+   "stock": "0c8300000140",
+   "op": "bytes",
+   "new": "0c830000017f",
+   "kind": "code",
+   "note": "4006787c_ParameterPageView__vslot02: cmpi.l #0x140,D3 -> #0x17f"
+  },
+  {
+   "addr": "0x400679da",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4006787c_ParameterPageView__vslot02: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x40068254",
+   "stock": "2a3c401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4006787c_ParameterPageView__vslot02: move.l #0x401f83a4,D5"
+  },
+  {
+   "addr": "0x40068290",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "4006787c_ParameterPageView__vslot02: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x4006831e",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "4006787c_ParameterPageView__vslot02: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x40068330",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4006787c_ParameterPageView__vslot02: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x4006e88a",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "4006e7d4_FUN_4006e7d4: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x4006e892",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4006e7d4_FUN_4006e7d4: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x4006eb9e",
+   "stock": "bdfc00000141",
+   "op": "bytes",
+   "new": "bdfc00000180",
+   "kind": "code",
+   "note": "4006eabe_FUN_4006eabe: cmpa.l #0x141,A6 -> #0x180"
+  },
+  {
+   "addr": "0x4006eba8",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4006eabe_FUN_4006eabe: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x4006f6a6",
+   "stock": "0c8300000141",
+   "op": "bytes",
+   "new": "0c8300000180",
+   "kind": "code",
+   "note": "4006f5e4_FxPageView__vslot04: cmpi.l #0x141,D3 -> #0x180"
+  },
+  {
+   "addr": "0x4006f6ae",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "4006f5e4_FxPageView__vslot04: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400bd57c",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400bd56e_FUN_400bd56e: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400bd582",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400bd56e_FUN_400bd56e: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400c257c",
+   "stock": "202f00040c8000000141",
+   "op": "jmp",
+   "target": "pg_disp_get",
+   "note": "the display table's accessor: move.l 4(sp),d0; cmpi.l #0x141,d0 (one of the row-count bounds)"
+  },
+  {
+   "addr": "0x400c25a4",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400c25a0_FUN_400c25a0: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400c25b6",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400c25a0_FUN_400c25a0: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400c27c6",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "400c268c_FUN_400c268c: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x400c27ce",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400c268c_FUN_400c268c: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400d5a8a",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "400d5a54_FUN_400d5a54: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x400d5a92",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400d5a54_FUN_400d5a54: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dbe2c",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dbe28_FUN_400dbe28: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dbe34",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dbe28_FUN_400dbe28: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dbe50",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dbe4c_FUN_400dbe4c: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dbe58",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dbe4c_FUN_400dbe4c: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dbe76",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "400dbe70_FUN_400dbe70: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x400dbe8a",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dbe70_FUN_400dbe70: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dbee6",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "400dbee0_FUN_400dbee0: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x400dbefa",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dbee0_FUN_400dbee0: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dbf54",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "400dbf4e_FUN_400dbf4e: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x400dbf68",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dbf4e_FUN_400dbf4e: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dbfc6",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dbfc2_FUN_400dbfc2: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dbfce",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dbfc2_FUN_400dbfc2: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dbff2",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dbfee_FUN_400dbfee: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dbffa",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dbfee_FUN_400dbfee: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc01e",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc01a_FUN_400dc01a: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc026",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc01a_FUN_400dc01a: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc052",
+   "stock": "0c8200000140",
+   "op": "bytes",
+   "new": "0c820000017f",
+   "kind": "code",
+   "note": "400dc04a_FUN_400dc04a: cmpi.l #0x140,D2 -> #0x17f"
+  },
+  {
+   "addr": "0x400dc066",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc04a_FUN_400dc04a: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc0b6",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc0b2_FUN_400dc0b2: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc0be",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc0b2_FUN_400dc0b2: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc0ea",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc0e6_FUN_400dc0e6: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc0f2",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc0e6_FUN_400dc0e6: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc124",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc120_FUN_400dc120: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc12c",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc120_FUN_400dc120: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc15a",
+   "stock": "0c8100000141",
+   "op": "bytes",
+   "new": "0c8100000180",
+   "kind": "code",
+   "note": "400dc154_FUN_400dc154: cmpi.l #0x141,D1 -> #0x180"
+  },
+  {
+   "addr": "0x400dc174",
+   "stock": "0681401f83ac",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc154_FUN_400dc154: addi.l #0x401f83ac,D1",
+   "addend": 8
+  },
+  {
+   "addr": "0x400dc282",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "400dc27e_FUN_400dc27e: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x400dc292",
+   "stock": "0680401f83c4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc27e_FUN_400dc27e: addi.l #0x401f83c4,D0",
+   "addend": 32
+  },
+  {
+   "addr": "0x400dc29e",
+   "stock": "2039401f83c4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc27e_FUN_400dc27e: move.l (DAT_401f83c4).l,D0",
+   "addend": 32
+  },
+  {
+   "addr": "0x400dc380",
+   "stock": "0c8000000140",
+   "op": "bytes",
+   "new": "0c800000017f",
+   "kind": "code",
+   "note": "400dc37c_FUN_400dc37c: cmpi.l #0x140,D0 -> #0x17f"
+  },
+  {
+   "addr": "0x400dc38e",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc37c_FUN_400dc37c: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc3e0",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc3dc_FUN_400dc3dc: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc3e8",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc3dc_FUN_400dc3dc: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc40a",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc406_FUN_400dc406: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc412",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc406_FUN_400dc406: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc42e",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc42a_FUN_400dc42a: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc436",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc42a_FUN_400dc42a: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc452",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc44e_FUN_400dc44e: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc45a",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc44e_FUN_400dc44e: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc476",
+   "stock": "0c8000000141",
+   "op": "bytes",
+   "new": "0c8000000180",
+   "kind": "code",
+   "note": "400dc472_FUN_400dc472: cmpi.l #0x141,D0 -> #0x180"
+  },
+  {
+   "addr": "0x400dc47e",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc472_FUN_400dc472: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x400dc6a2",
+   "stock": "45f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "400dc634_FUN_400dc634: lea (DAT_401f83a4).l,A2"
+  },
+  {
+   "addr": "0x400dc954",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "400dc634_FUN_400dc634: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x400f51ca",
+   "stock": "283c00000504",
+   "op": "bytes",
+   "new": "283c00000600",
+   "kind": "code",
+   "note": "ParameterUpdateCache D: get: lane stride of dirty"
+  },
+  {
+   "addr": "0x400f51e6",
+   "stock": "223c00005544",
+   "op": "bytes",
+   "new": "223c00006600",
+   "kind": "code",
+   "note": "ParameterUpdateCache DB: get: bank stride of dirty"
+  },
+  {
+   "addr": "0x400f51f0",
+   "stock": "203c0000ffe4",
+   "op": "bytes",
+   "new": "203c00013218",
+   "kind": "code",
+   "note": "ParameterUpdateCache BANK: get: bank"
+  },
+  {
+   "addr": "0x400f5202",
+   "stock": "41e8555c",
+   "op": "bytes",
+   "new": "41e86618",
+   "kind": "code",
+   "note": "ParameterUpdateCache DIRTY: get: lea dirty(a0),a0"
+  },
+  {
+   "addr": "0x400f5222",
+   "stock": "223c00002aa2",
+   "op": "bytes",
+   "new": "223c00003300",
+   "kind": "code",
+   "note": "ParameterUpdateCache B: get: bank stride of value"
+  },
+  {
+   "addr": "0x400f5230",
+   "stock": "203c00000282",
+   "op": "bytes",
+   "new": "203c00000300",
+   "kind": "code",
+   "note": "ParameterUpdateCache V: get: lane stride of value"
+  },
+  {
+   "addr": "0x400f5296",
+   "stock": "203c0000ffe4",
+   "op": "bytes",
+   "new": "203c00013218",
+   "kind": "code",
+   "note": "ParameterUpdateCache BANK: set: bank"
+  },
+  {
+   "addr": "0x400f52a4",
+   "stock": "2a3c00002aa2",
+   "op": "bytes",
+   "new": "2a3c00003300",
+   "kind": "code",
+   "note": "ParameterUpdateCache B: set: bank stride of value"
+  },
+  {
+   "addr": "0x400f52ae",
+   "stock": "3a3c0504",
+   "op": "bytes",
+   "new": "3a3c0600",
+   "kind": "code",
+   "note": "ParameterUpdateCache D: set: move.w #lane stride of dirty,d5w (d5 upper word 0)"
+  },
+  {
+   "addr": "0x400f52b6",
+   "stock": "223c00000282",
+   "op": "bytes",
+   "new": "223c00000300",
+   "kind": "code",
+   "note": "ParameterUpdateCache V: set: lane stride of value"
+  },
+  {
+   "addr": "0x400f52cc",
+   "stock": "223c00005544",
+   "op": "bytes",
+   "new": "223c00006600",
+   "kind": "code",
+   "note": "ParameterUpdateCache DB: set: bank stride of dirty"
+  },
+  {
+   "addr": "0x400f52de",
+   "stock": "41e8555c",
+   "op": "bytes",
+   "new": "41e86618",
+   "kind": "code",
+   "note": "ParameterUpdateCache DIRTY: set: lea dirty(a0),a0"
+  },
+  {
+   "addr": "0x400f536c",
+   "stock": "243c0000ffe4",
+   "op": "bytes",
+   "new": "243c00013218",
+   "kind": "code",
+   "note": "ParameterUpdateCache BANK: flush: bank"
+  },
+  {
+   "addr": "0x400f53c4",
+   "stock": "203c00005544",
+   "op": "bytes",
+   "new": "203c00006600",
+   "kind": "code",
+   "note": "ParameterUpdateCache DB: flush: bank stride of dirty"
+  },
+  {
+   "addr": "0x400f53ce",
+   "stock": "207c0000ffe8",
+   "op": "bytes",
+   "new": "207c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: flush: the vector"
+  },
+  {
+   "addr": "0x400f53dc",
+   "stock": "203c00002aa2",
+   "op": "bytes",
+   "new": "203c00003300",
+   "kind": "code",
+   "note": "ParameterUpdateCache B: flush: bank stride of value"
+  },
+  {
+   "addr": "0x400f53e6",
+   "stock": "47eb555c",
+   "op": "bytes",
+   "new": "47eb6618",
+   "kind": "code",
+   "note": "ParameterUpdateCache DIRTY: flush: lea dirty(a3),a3"
+  },
+  {
+   "addr": "0x400f5400",
+   "stock": "227c0000ffe8",
+   "op": "bytes",
+   "new": "227c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: flush: the vector"
+  },
+  {
+   "addr": "0x400f5436",
+   "stock": "207c0000ffe8",
+   "op": "bytes",
+   "new": "207c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: flush: the vector"
+  },
+  {
+   "addr": "0x400f5460",
+   "stock": "0c8200000504",
+   "op": "bytes",
+   "new": "0c8200000600",
+   "kind": "code",
+   "note": "ParameterUpdateCache D: flush: cmpi.l #words per lane: end of the scan"
+  },
+  {
+   "addr": "0x400f5468",
+   "stock": "203c0000ffec",
+   "op": "bytes",
+   "new": "203c00013220",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC4: flush: the vector's end"
+  },
+  {
+   "addr": "0x400f546e",
+   "stock": "2e3c0000ffe8",
+   "op": "bytes",
+   "new": "2e3c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: flush: the vector"
+  },
+  {
+   "addr": "0x400f54d0",
+   "stock": "203c0000ffe8",
+   "op": "bytes",
+   "new": "203c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: flush: the vector"
+  },
+  {
+   "addr": "0x400f54e4",
+   "stock": "103cffec",
+   "op": "bytes",
+   "new": "103cff20",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC4: flush: move.b #-0x14,d0b turns d0 = vec into vec+4"
+  },
+  {
+   "addr": "0x400f552e",
+   "stock": "223c0000ffe8",
+   "op": "bytes",
+   "new": "223c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: flush: the vector"
+  },
+  {
+   "addr": "0x400f5534",
+   "stock": "203c0000ffec",
+   "op": "bytes",
+   "new": "203c00013220",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC4: flush: the vector's end"
+  },
+  {
+   "addr": "0x400f5546",
+   "stock": "47eb0504",
+   "op": "bytes",
+   "new": "47eb0600",
+   "kind": "code",
+   "note": "ParameterUpdateCache D: flush: lea next lane (dirty),a3"
+  },
+  {
+   "addr": "0x400f554a",
+   "stock": "49ec0282",
+   "op": "bytes",
+   "new": "49ec0300",
+   "kind": "code",
+   "note": "ParameterUpdateCache V: flush: lea next lane (value),a4"
+  },
+  {
+   "addr": "0x40105e38",
+   "stock": "0c8200000141",
+   "op": "bytes",
+   "new": "0c8200000180",
+   "kind": "code",
+   "note": "40105d4c_FUN_40105d4c: cmpi.l #0x141,D2 -> #0x180"
+  },
+  {
+   "addr": "0x40105e40",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40105d4c_FUN_40105d4c: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x4010784e",
+   "stock": "bbfc00000140",
+   "op": "bytes",
+   "new": "bbfc0000017f",
+   "kind": "code",
+   "note": "40107588_ModSetupView__vslot04: cmpa.l #0x140,A5 -> #0x17f"
+  },
+  {
+   "addr": "0x40107862",
+   "stock": "41f9401f83a4",
+   "op": "keep2",
+   "target": "pg_desc",
+   "note": "40107588_ModSetupView__vslot04: lea (DAT_401f83a4).l,A0"
+  },
+  {
+   "addr": "0x4018e7e8",
+   "stock": "203c0000ffe8",
+   "op": "bytes",
+   "new": "203c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: destructor: the vector's storage"
+  },
+  {
+   "addr": "0x4018e94e",
+   "stock": "2f3c0000fff4",
+   "op": "bytes",
+   "new": "2f3c00013228",
+   "kind": "code",
+   "note": "ParameterUpdateCache SIZE: move.l #size,-(sp): operator new"
+  },
+  {
+   "addr": "0x4018e95c",
+   "stock": "2f3c0000fff4",
+   "op": "bytes",
+   "new": "2f3c00013228",
+   "kind": "code",
+   "note": "ParameterUpdateCache SIZE: move.l #size,-(sp): memset length"
+  },
+  {
+   "addr": "0x4018e986",
+   "stock": "203c0000ffe4",
+   "op": "bytes",
+   "new": "203c00013218",
+   "kind": "code",
+   "note": "ParameterUpdateCache BANK: move.l #bank,d0: clr.l bank"
+  },
+  {
+   "addr": "0x4018e990",
+   "stock": "223c0000ffe8",
+   "op": "bytes",
+   "new": "223c0001321c",
+   "kind": "code",
+   "note": "ParameterUpdateCache VEC: move.l #vec,d1: clr.l the vector"
+  },
+  {
+   "addr": "0x401ae0cc",
+   "stock": "4eb9400c2c4e",
+   "op": "jsr",
+   "target": "pg_sinit",
+   "note": "FUN_401ae0c8 (init_array) calls the static initializer 0x400c2c4e that builds the display table and the page records"
+  }
+ ]
+}

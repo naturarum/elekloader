@@ -353,6 +353,120 @@ def test_fx_rename_only_repoints_names():
     assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
 
 
+# the parameter descriptor table (rows of 0x3c bytes) and what param-grow makes of it
+DESC, DROW, ROWS0, ROWS = 0x401f83a4, 0x3c, 0x141, 0x180
+PG_DESC = 0x47D00000
+# compares that look like the row count and are not: a row-id test in the filter page and a
+# 16 x 0x14 loop in three KitActive functions; and the next table's address, one past the end
+LOOKALIKES = (0x4006ef0a, 0x4006ef14, 0x40031fee, 0x40032422, 0x400325e2, 0x400e067c)
+
+
+def test_param_grow_moves_the_table_and_its_bounds_only():
+    """examples/param-grow-dn2 with core: outside core's sites, only param-grow's sites change.
+    Every operand that held the descriptor table's address (or row 0's +0x08/+0x20) holds the
+    grown table's at the same offset, opcode word kept; every row-count bound #0x141/#0x140 is
+    #0x180/#0x17f; the ParameterUpdateCache's constants are its stock formulas with 0x180 rows;
+    the boot call, the static initializer's call and the display accessor go to the mod's code.
+    The five look-alike compares and the stock table itself are untouched (it is copied at boot,
+    so other mods' data sites in it, fx-rename's names for one, still count)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        grow = built(os.path.join('examples', 'param-grow-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core, grow], version='GT0X', log=lambda *a: None)
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    with open(os.path.join(os.path.dirname(HERE), 'examples', 'param-grow-dn2', 'mod.json')) as fh:
+        doc = json.load(fh)
+    lay = man['link']['layout']
+    run_lo, run_hi = lay['ddr']
+    allowed = {s - DEV.main_load + k for s, _ in CORE_SITES for k in range(6)}
+    ops = {}
+    k0 = {2 * ROWS0: 2 * ROWS, 34 * ROWS0: 34 * ROWS, 4 * ROWS0: 4 * ROWS, 68 * ROWS0: 68 * ROWS,
+          0x18 + 68 * ROWS0: 0x18 + 68 * ROWS}
+    bank0, bank = 0x18 + 204 * ROWS0, 0x18 + 204 * ROWS
+    k0.update({bank0 + d: bank + d for d in (0, 4, 8, 0x10)})
+    for s in doc['sites']:
+        a = int(s['addr'], 16)
+        o = a - DEV.main_load
+        n = len(s['stock']) // 2
+        assert img[o:o + n].hex() == s['stock'], s['addr']
+        allowed |= set(range(o, o + n))
+        ops[s['op']] = ops.get(s['op'], 0) + 1
+        if s['op'] == 'keep2':
+            old, got = word(img, a + 2), word(new, a + 2)
+            assert DESC <= old < DESC + ROWS0 * DROW and new[o:o + 2] == img[o:o + 2], s['addr']
+            assert got == PG_DESC + old - DESC, (s['addr'], hex(got))
+        elif s['op'] in ('jsr', 'jmp'):
+            assert new[o:o + 2] == {'jsr': b'\x4e\xb9', 'jmp': b'\x4e\xf9'}[s['op']], s['addr']
+            assert run_lo <= word(new, a + 2) < run_hi, s['addr']
+        elif s['note'].startswith('ParameterUpdateCache'):
+            assert new[o:o + n].hex() == s['new'], s['addr']
+            if n == 6:
+                assert k0[word(img, a + 2)] == word(new, a + 2), s['addr']
+            elif new[o:o + 2] == b'\x10\x3c':                          # move.b #lo(vec+4),d0b
+                assert new[o + 3] == (bank + 8) & 0xff and img[o + 3] == (bank0 + 8) & 0xff
+            else:
+                assert k0[word(img, a + 2, 2)] == word(new, a + 2, 2), s['addr']
+        else:                                                         # a row-count bound
+            assert new[o:o + 2] == img[o:o + 2] and new[o:o + n].hex() == s['new'], s['addr']
+            assert {word(img, a + 2): word(new, a + 2)} in ({0x141: 0x180}, {0x140: 0x17f}), s['addr']
+    assert ops == {'keep2': 56, 'bytes': 90, 'jsr': 2, 'jmp': 1}, ops
+    for a in LOOKALIKES:
+        o = a - DEV.main_load
+        assert new[o:o + 6] == img[o:o + 6], hex(a)
+    lo = DESC - DEV.main_load
+    assert new[lo:lo + ROWS0 * DROW] == img[lo:lo + ROWS0 * DROW]
+    end = len(img)
+    changed = {i for i in range(end) if new[i] != img[i]}
+    assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
+    gaps = man['output']['main']['inplace_gaps']
+    assert min(gaps.values()) > 0
+
+
+def test_param_rows_are_data_only():
+    """examples/param-rows-dn2 on top of core and param-grow changes nothing below the stock image's
+    end (its rows are data in its RAM image), and each of its rows is inert: an FX-set row with a k
+    no stock FX row has, default 0, no MIDI CC or NRPN, display flag bit 3 set (never p-lockable),
+    no randomiser kept, an Overbridge id from 0x400, on no page."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        grow = built(os.path.join('examples', 'param-grow-dn2'), tmp)
+        rows = built(os.path.join('examples', 'param-rows-dn2'), tmp)
+        out0, man0 = patch.build(SYX, [core, grow], version='GT0X', log=lambda *a: None)
+        out1, man1 = patch.build(SYX, [core, grow, rows], version='GT1X', log=lambda *a: None)
+    st, img = stock()
+    a0 = formats.main_image(formats.parse(out0['syx'], DEV), DEV)
+    a1 = formats.main_image(formats.parse(out1['syx'], DEV), DEV)
+    end = len(img)
+    assert a0[:end] == a1[:end]
+    assert man1['link']['tables']['param_rows']['entries'] == 1
+    lay = man1['link']['layout']
+    run_lo = lay['ddr'][0]
+    run = a1[lay['run_load'] - DEV.main_load:]
+    stock_fx_k = {word(img, DESC + DROW * r + 4) for r in range(ROWS0)
+                  if 0x10 <= word(img, DESC + DROW * r) <= 0x15}
+    at = man1['link']['tables']['param_rows']['at']
+    arr = int.from_bytes(run[int(at, 16) - run_lo:int(at, 16) - run_lo + 4], 'big')
+    seen = 0
+    while True:
+        rec = run[arr - run_lo:arr - run_lo + 0x54]
+        rid = int.from_bytes(rec[:4], 'big')
+        if not rid:
+            break
+        d = rec[4:0x40]
+        f = lambda off, n=4: int.from_bytes(d[off:off + n], 'big', signed=True)   # noqa: E731
+        assert ROWS0 <= rid < ROWS and 0x10 <= f(0) <= 0x15, hex(rid)
+        assert f(4) not in stock_fx_k and 0 <= f(4) <= 100 and f(4) != 65, (hex(rid), f(4))
+        assert f(0x10) == 0 and f(0x18, 2) == -1 and f(0x1a, 2) == -1 and f(0x1c) == -1, hex(rid)
+        assert f(0x20) >= 0x400 and f(0x24) == 0, hex(rid)
+        look, fset, opts, page, slot = (int.from_bytes(rec[o:o + 4], 'big', signed=True)
+                                        for o in (0x40, 0x44, 0x48, 0x4c, 0x50))
+        assert 0 <= look < ROWS0 and fset & 8 and not opts & 1 and page == -1, hex(rid)
+        seen += 1
+        arr += 0x54
+    assert seen == 17
+
+
 # ---- protected ranges -------------------------------------------------------------------------
 
 def test_the_panel_firmware_range_is_what_the_updater_sends():

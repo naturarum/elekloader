@@ -1,0 +1,17 @@
+{
+ "id": "param-test",
+ "version": "0.1",
+ "title": "TEST knobs on the flanger page (emulator only)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "FOR THE EMULATOR ONLY, DO NOT FLASH. Two new parameter rows on the empty knobs E and F of the flanger (chorus) page, through param-grow, drawn and turned by the stock page code and never p-lockable. TEST (row 0x17f) has MIDI CC 3 and NRPN 307 on the FX channel and shares k 48 with the hidden stock row Reverb FX Routing so that the stock kit storage keeps its value, which is why it must not go on a unit. TST2 (row 0x17e) uses k 87, which the stock storage does not keep. A test of dn2-cfw's GT01 build (GT1T).",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": ["test.c"],
+ "contribute": [
+  {"to": "param_rows", "order": 60, "data": "00000000", "relocs": [[0, "abs32", "sym:test_rows", 0]]}
+ ],
+ "resources": {"names": ["param-row:0x17e", "param-row:0x17f"]},
+ "requires": ["core", "param-grow"]
+}
