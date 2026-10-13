@@ -1,0 +1,308 @@
+{
+ "id": "fx-echo",
+ "version": "0.1",
+ "title": "Echo page: the Space Echo on one page (SE01)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only, never run on a unit. For dn2-cfw's SE01 build, whose DSP runs a Space Echo in the delay slot and a flanger in the chorus slot. Supersedes fx-rename: the chorus page and its sends are named Flanger/FLG as there, the delay page and its sends Echo/ECHO (the page box says ECH). The delay page becomes TIME MODE WID FDBK CNTR BW AGE REV: X (Pingpong) widened to MODE 0..6 (heads 1, 2, 3, 12, 23, 13, 123), HPF/LPF named CNTR/BW with the filter picture drawing the echo's band, and the hidden Delay FX Routing row made AGE (0..127) and placed on the empty knob G. Every knob keeps its MIDI CC, storage and DSP frame word; MODE and AGE are never p-lockable; AGE has no CC. On a stock DSP the names would be wrong.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "fx_echo.c",
+  "graph.s"
+ ],
+ "subscribe": [
+  {
+   "event": "ev_tick",
+   "fn": "fxe_tick",
+   "order": 50
+  }
+ ],
+ "exports": [
+  "fxe_state",
+  "fxe_ticks",
+  "fxe_band_seen"
+ ],
+ "sites": [
+  {
+   "addr": "0x400ca018",
+   "stock": "487940210a96",
+   "op": "keep2",
+   "target": "fxe_flanger"
+  },
+  {
+   "addr": "0x400c9fba",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "fxe_flg"
+  },
+  {
+   "addr": "0x4006f4f8",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "fxe_flg"
+  },
+  {
+   "addr": "0x401f9380",
+   "stock": "40210bcf",
+   "op": "ptr",
+   "target": "fxe_flg_send"
+  },
+  {
+   "addr": "0x401f9388",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fxe_flg"
+  },
+  {
+   "addr": "0x401f9dd0",
+   "stock": "4021c061",
+   "op": "ptr",
+   "target": "fxe_flg_mix"
+  },
+  {
+   "addr": "0x401f9dd8",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fxe_flg"
+  },
+  {
+   "addr": "0x401fa460",
+   "stock": "40210bcc",
+   "op": "ptr",
+   "target": "fxe_flg_in"
+  },
+  {
+   "addr": "0x401fa468",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fxe_flg"
+  },
+  {
+   "addr": "0x401fa49c",
+   "stock": "40210c22",
+   "op": "ptr",
+   "target": "fxe_flg_in_l"
+  },
+  {
+   "addr": "0x401fa4a4",
+   "stock": "40210c33",
+   "op": "ptr",
+   "target": "fxe_flg_l"
+  },
+  {
+   "addr": "0x401fa4d8",
+   "stock": "40210c38",
+   "op": "ptr",
+   "target": "fxe_flg_in_r"
+  },
+  {
+   "addr": "0x401fa4e0",
+   "stock": "40210c49",
+   "op": "ptr",
+   "target": "fxe_flg_r"
+  },
+  {
+   "addr": "0x400c9f34",
+   "stock": "487940210a10",
+   "op": "keep2",
+   "target": "fxe_echo"
+  },
+  {
+   "addr": "0x400c9ee6",
+   "stock": "487940210dd1",
+   "op": "keep2",
+   "target": "fxe_ech"
+  },
+  {
+   "addr": "0x4006f4f0",
+   "stock": "487940210dd1",
+   "op": "keep2",
+   "target": "fxe_ech"
+  },
+  {
+   "addr": "0x401f93bc",
+   "stock": "40210bde",
+   "op": "ptr",
+   "target": "fxe_echo_send"
+  },
+  {
+   "addr": "0x401f93c4",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxe_echo_s"
+  },
+  {
+   "addr": "0x401f9d58",
+   "stock": "40210bde",
+   "op": "ptr",
+   "target": "fxe_echo_send"
+  },
+  {
+   "addr": "0x401f9d60",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxe_echo_s"
+  },
+  {
+   "addr": "0x401f9fec",
+   "stock": "4021c071",
+   "op": "ptr",
+   "target": "fxe_echo_mix"
+  },
+  {
+   "addr": "0x401f9ff4",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxe_echo_s"
+  },
+  {
+   "addr": "0x401fa514",
+   "stock": "40210bdb",
+   "op": "ptr",
+   "target": "fxe_echo_in"
+  },
+  {
+   "addr": "0x401fa51c",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxe_echo_s"
+  },
+  {
+   "addr": "0x401fa550",
+   "stock": "40210c4e",
+   "op": "ptr",
+   "target": "fxe_echo_in_l"
+  },
+  {
+   "addr": "0x401fa558",
+   "stock": "40210c5e",
+   "op": "ptr",
+   "target": "fxe_echo_l"
+  },
+  {
+   "addr": "0x401fa58c",
+   "stock": "40210c63",
+   "op": "ptr",
+   "target": "fxe_echo_in_r"
+  },
+  {
+   "addr": "0x401fa594",
+   "stock": "40210c73",
+   "op": "ptr",
+   "target": "fxe_echo_r"
+  },
+  {
+   "addr": "0x401f7b38",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxe_echo_s"
+  },
+  {
+   "addr": "0x401f9e48",
+   "stock": "40210ab7",
+   "op": "ptr",
+   "target": "fxe_time"
+  },
+  {
+   "addr": "0x401f9e84",
+   "stock": "40210ac2",
+   "op": "ptr",
+   "target": "fxe_mode"
+  },
+  {
+   "addr": "0x401f9e8c",
+   "stock": "40219ec8",
+   "op": "ptr",
+   "target": "fxe_mode_s"
+  },
+  {
+   "addr": "0x401f9e68",
+   "stock": "00000100",
+   "op": "bytes",
+   "new": "00000600",
+   "kind": "data"
+  },
+  {
+   "addr": "0x401f9e90",
+   "stock": "400e3568",
+   "op": "ptr",
+   "target": "fxe_fmt_mode"
+  },
+  {
+   "addr": "0x401f9ec0",
+   "stock": "40210acb",
+   "op": "ptr",
+   "target": "fxe_wid"
+  },
+  {
+   "addr": "0x401f9efc",
+   "stock": "40210adc",
+   "op": "ptr",
+   "target": "fxe_int"
+  },
+  {
+   "addr": "0x401f9f38",
+   "stock": "40210aef",
+   "op": "ptr",
+   "target": "fxe_cntr"
+  },
+  {
+   "addr": "0x401f9f40",
+   "stock": "40210af8",
+   "op": "ptr",
+   "target": "fxe_cntr_s"
+  },
+  {
+   "addr": "0x401f9f74",
+   "stock": "40210afc",
+   "op": "ptr",
+   "target": "fxe_bw"
+  },
+  {
+   "addr": "0x401f9f7c",
+   "stock": "40210b05",
+   "op": "ptr",
+   "target": "fxe_bw_s"
+  },
+  {
+   "addr": "0x401fa064",
+   "stock": "4021c080",
+   "op": "ptr",
+   "target": "fxe_age"
+  },
+  {
+   "addr": "0x401fa06c",
+   "stock": "40210dd1",
+   "op": "ptr",
+   "target": "fxe_age_s"
+  },
+  {
+   "addr": "0x401fa048",
+   "stock": "00000100",
+   "op": "bytes",
+   "new": "00007f00",
+   "kind": "data"
+  },
+  {
+   "addr": "0x401fa070",
+   "stock": "400e3592",
+   "op": "bytes",
+   "new": "400e3030",
+   "kind": "data"
+  },
+  {
+   "addr": "0x4006f710",
+   "stock": "206800884e90",
+   "op": "jsr",
+   "target": "fxe_graphid"
+  }
+ ],
+ "requires": [
+  "core"
+ ],
+ "conflicts": [
+  "fx-rename"
+ ]
+}

@@ -353,6 +353,110 @@ def test_fx_rename_only_repoints_names():
     assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
 
 
+def test_fx_echo_relabels_the_delay_page_and_widens_two_rows_only():
+    """examples/fx-echo-dn2 with core: outside core's sites, only fx-echo's sites change: names
+    (pointers and `pea` operands into the mod's RAM image), MODE's formatter (a pointer to the mod's
+    code), the two new maxima (MODE 0..6, AGE 0..127) and AGE's formatter (the stock plain number)
+    as data, and one jsr in FxPageView's draw (the band picture). The delay page's rows keep their
+    k, MIDI CC, NRPN, default, bipolar flag and Overbridge id; AGE has no CC or NRPN; the flanger
+    names are fx-rename's, at the same sites; fx-echo and fx-rename together are refused; fxe_tick
+    is on ev_tick."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        echo = built(os.path.join('examples', 'fx-echo-dn2'), tmp)
+        ren = built(os.path.join('examples', 'fx-rename-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core, echo], version='SE0X', log=lambda *a: None)
+        outren, manren = patch.build(SYX, [core, ren], version='FTN0', log=lambda *a: None)
+        refusal = expect(lambda: patch.build(SYX, [core, echo, ren], version='XXXX', log=lambda *a: None),
+                         'fx-rename')
+    assert 'fx-echo' in refusal
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    nren = formats.main_image(formats.parse(outren['syx'], DEV), DEV)
+    here = os.path.dirname(HERE)
+    with open(os.path.join(here, 'examples', 'fx-echo-dn2', 'mod.json')) as fh:
+        doc = json.load(fh)
+    with open(os.path.join(here, 'examples', 'fx-rename-dn2', 'mod.json')) as fh:
+        rdoc = json.load(fh)
+    assert man['link']['tables']['ev_tick']['entries'] == 2               # core_fastcopy, fxe_tick
+    lay, lren = man['link']['layout'], manren['link']['layout']
+    run_lo, run_hi = lay['ddr']
+    run_img = new[lay['run_load'] - DEV.main_load:]
+    ren_img = nren[lren['run_load'] - DEV.main_load:]
+
+    def text(at, base, image):
+        return image[at - base:at - base + 24].split(b'\0')[0]
+    allowed = {s - DEV.main_load + k for s, _ in CORE_SITES for k in range(6)}
+    ops = {}
+    for s in doc['sites']:
+        a = int(s['addr'], 16)
+        o = a - DEV.main_load
+        n = len(s['stock']) // 2
+        assert img[o:o + n].hex() == s['stock'], s['addr']
+        allowed |= set(range(o, o + n))
+        ops[s['op']] = ops.get(s['op'], 0) + 1
+        if s['op'] == 'jsr':
+            assert a == 0x4006f710 and s['stock'] == '206800884e90' and s['target'] == 'fxe_graphid'
+            assert new[o:o + 2] == b'\x4e\xb9' and run_lo <= word(new, a + 2) < run_hi
+        elif s['op'] == 'bytes':
+            row, off = divmod(a - DESC, DROW)
+            assert (row, off, word(img, a), word(new, a)) in (
+                (0x72, 0x0c, 1 << 8, 6 << 8), (0x7a, 0x0c, 1 << 8, 127 << 8),
+                (0x7a, 0x34, 0x400e3592, 0x400e3030)), s['addr']
+        else:
+            if s['op'] == 'keep2':
+                assert img[o:o + 2] == new[o:o + 2] == b'\x48\x79', s['addr']    # pea (abs).l
+                o += 2
+            p = word(new, DEV.main_load + o)
+            assert run_lo <= p < run_hi, s['addr']
+            if s['target'] == 'fxe_fmt_mode':
+                assert (a - DESC) % DROW == 0x34 and (a - DESC) // DROW == 0x72 and p % 2 == 0
+            else:
+                t = text(p, run_lo, run_img)
+                assert t and all(32 <= c < 127 for c in t), (s['addr'], t)
+    assert ops == {'keep2': 6, 'ptr': 35, 'bytes': 3, 'jsr': 1}, ops
+    end = len(img)
+    changed = {i for i in range(end) if new[i] != img[i]}
+    assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
+
+    def name(image, base, rimg, row, off):
+        return text(word(image, DESC + DROW * row + off), base, rimg).decode()
+    # the delay page A..G and the rows that keep their storage, MIDI and Overbridge identity
+    labels = {0x71: 'TIME', 0x72: 'MODE', 0x73: 'WID', 0x74: 'FDBK', 0x75: 'CNTR', 0x76: 'BW', 0x7a: 'AGE'}
+    for row, label in labels.items():
+        r0 = DESC + DROW * row
+        lab = text(word(new, r0 + 0x30), run_lo, run_img) if word(new, r0 + 0x30) >= run_lo else \
+            img[word(img, r0 + 0x30) - DEV.main_load:].split(b'\0')[0]
+        assert lab.decode() == label, (hex(row), lab)
+        for off in (0x00, 0x04, 0x08, 0x10, 0x14, 0x18, 0x1c, 0x20, 0x24, 0x2c, 0x38):
+            assert word(new, r0 + off) == word(img, r0 + off), (hex(row), hex(off))
+    assert word(new, DESC + DROW * 0x7a + 0x18) == 0xffffffff               # AGE: no MIDI CC
+    assert word(new, DESC + DROW * 0x7a + 0x1c) == 0xffffffff               # and no NRPN
+    assert name(new, run_lo, run_img, 0x7a, 0x28) == 'Echo Age'
+    # MODE's value texts, in its formatter's table
+    assert b'1\0\0\0' b'2\0\0\0' b'3\0\0\0' b'12\0\0' b'23\0\0' b'13\0\0' b'123\0' in run_img
+    # the band picture's half widths, BW 0..127: 0.5 octave at BW 0, rising, wider than the whole
+    # CENTER range (127 << 8) before BW 127
+    at = run_img.find(bytes.fromhex('03f8 0416'.replace(' ', '')))
+    assert at >= 0
+    half = [int.from_bytes(run_img[at + 2 * i:at + 2 * i + 2], 'big') for i in range(128)]
+    assert all(a < b for a, b in zip(half, half[1:])) and half[0] == 1016 and half[127] > 127 << 8
+    # the flanger names: fx-rename's sites, the same strings; its tape names now say Echo
+    flg = 0
+    for s in rdoc['sites']:
+        a = int(s['addr'], 16) + (2 if s['op'] == 'keep2' else 0)
+        mine = text(word(new, a), run_lo, run_img).decode()
+        theirs = text(word(nren, a), lren['ddr'][0], ren_img).decode()
+        if 'FL' in theirs.upper():
+            assert mine == theirs, (s['addr'], mine, theirs)
+            flg += 1
+        else:
+            assert mine == theirs.replace('Tape', 'Echo').replace('TAPE', 'ECHO').replace('TAP', 'ECH'), s['addr']
+    assert flg == 13
+    gaps = man['output']['main']['inplace_gaps']
+    assert min(gaps.values()) > 0
+
+
 # the parameter descriptor table (rows of 0x3c bytes) and what param-grow makes of it
 DESC, DROW, ROWS0, ROWS = 0x401f83a4, 0x3c, 0x141, 0x180
 PG_DESC = 0x47D00000
