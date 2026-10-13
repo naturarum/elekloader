@@ -11,6 +11,7 @@ unchanged so the builds stay byte-for-byte reproducible. This file holds the cur
 | `fx-rename-dn2` | **ran on a unit** (FTN1, 2026-10-13): every name displays correctly |
 | `param-grow-dn2` | **ran on a unit** (GT00, 2026-10-13): normal use, +Drive save and load, cold start |
 | `param-rows-dn2` | **ran on a unit** (GT01, 2026-10-13) |
+| `fx-echo-dn2` | emulator only so far (SE01, brick checker 12/12, 2026-10-13); AGE's label does not show its value while turning (known, minor) |
 | `param-test-dn2` | emulator only. **Never flash it** |
 | `fx-page2-dn2` | emulator only. **Never flash it**: it borrows rows that carry MIDI CCs, and its SHPE row copies a lockable display entry, so a p-lock on it would be saved as a lock on the track's sound slot 70 (dn2-cfw `notes/T6.1-table-growth-study.md`) |
 | `flanger-ui-dn2` | emulator only, superseded by `fx-rename-dn2` |
