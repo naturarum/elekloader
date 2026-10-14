@@ -273,16 +273,18 @@ def built(moddir, tmp):
 
 
 # core-dn2's sites and their stock bytes: the Digitakt II core's six and its boot site, found
-# again, and the three MIDI sites (two for ev_midi_step, one for ev_midi_note)
+# again, the three MIDI sites (two for ev_midi_step, one for ev_midi_note), and from core-dn2 0.2
+# the page-record accessor (core_pagerecs)
 CORE_SITES = ((0x40000538, '4eb9400019b0'), (0x4002e464, '4eb94011d5d4'),
               (0x4002e4ca, '4eb94011d60a'), (0x4002f20c, '4eb94002c5c8'),
               (0x4002f256, '4eb94002c55c'), (0x4009ff88, '205248780002'),
               (0x400987a2, '4cef7c7c0018'), (0x400da0b2, '2f024ebaec08'),
-              (0x400d9230, '2f024ebafa8a'), (0x4012b490, '727fc2802841'))
+              (0x400d9230, '2f024ebafa8a'), (0x4012b490, '727fc2802841'),
+              (0x400c25d8, '7224202f0004'))
 
 
 def test_core_builds_links_and_verifies():
-    """mods/core-dn2 built with the SDK, then a build with it alone: its ten
+    """mods/core-dn2 built with the SDK, then a build with it alone: its eleven
     sites, and nothing else in the image changed; both stages keep a gap."""
     with tempfile.TemporaryDirectory() as tmp:
         core = built(os.path.join('mods', 'core-dn2'), tmp)
@@ -529,9 +531,13 @@ def test_param_grow_moves_the_table_and_its_bounds_only():
 
 def test_param_rows_are_data_only():
     """examples/param-rows-dn2 on top of core and param-grow changes nothing below the stock image's
-    end (its rows are data in its RAM image), and each of its rows is inert: an FX-set row with a k
-    no stock FX row has, default 0, no MIDI CC or NRPN, display flag bit 3 set (never p-lockable),
-    no randomiser kept, an Overbridge id from 0x400, on no page."""
+    end (its rows and value texts are data and code in its RAM image), and each of its 17 rows is
+    an FX row as the study's rules want: a k no stock FX row has (70..86, in order), no MIDI CC or
+    NRPN, no modulation flags, display flag bit 3 set (never p-lockable), no randomiser kept, an
+    Overbridge id from 0x400, on no page by param-grow. From 0.2 (CMP1): the names, ranges,
+    new-kit defaults (the stock compressor's) and value texts of the 3-band compressor's knobs
+    (dn2-cfw notes/T6.4 2.2): RAT 0..8 (1.00, then the stock ratio texts), the crossovers' texts
+    from tables that follow the DSP's laws."""
     with tempfile.TemporaryDirectory() as tmp:
         core = built(os.path.join('mods', 'core-dn2'), tmp)
         grow = built(os.path.join('examples', 'param-grow-dn2'), tmp)
@@ -547,11 +553,27 @@ def test_param_rows_are_data_only():
     lay = man1['link']['layout']
     run_lo = lay['ddr'][0]
     run = a1[lay['run_load'] - DEV.main_load:]
+    smap = man1['_map']
     stock_fx_k = {word(img, DESC + DROW * r + 4) for r in range(ROWS0)
                   if 0x10 <= word(img, DESC + DROW * r) <= 0x15}
+
+    def text(p):
+        if run_lo <= p:
+            return run[p - run_lo:p - run_lo + 32].split(b'\0')[0].decode()
+        return img[p - DEV.main_load:p - DEV.main_load + 32].split(b'\0')[0].decode()
+    plain, db = 0x400e3030, 0x400e3b2e
+    kinds = [('Threshold', 'THR', 127, 32, plain), ('Ratio', 'RAT', 8, 4, 'param_rows_fmt_ratio'),
+             ('Attack', 'ATK', 127, 24, plain), ('Release', 'REL', 127, 32, plain),
+             ('Makeup', 'MUP', 127, 64, db)]
+    want = {}
+    for b, band in enumerate(('Low', 'Mid', 'High')):
+        for i, (nm, sn, mx, df, fmt) in enumerate(kinds):
+            want[0x141 + 6 * b + i] = (band + ' ' + nm, sn, mx, df, fmt)
+    want[0x146] = ('Low/Mid X-Over', 'XOVR', 127, 68, 'param_rows_fmt_xlo')
+    want[0x14c] = ('Mid/High X-Over', 'XOVR', 127, 44, 'param_rows_fmt_xhi')
     at = man1['link']['tables']['param_rows']['at']
     arr = int.from_bytes(run[int(at, 16) - run_lo:int(at, 16) - run_lo + 4], 'big')
-    seen = 0
+    seen = []
     while True:
         rec = run[arr - run_lo:arr - run_lo + 0x54]
         rid = int.from_bytes(rec[:4], 'big')
@@ -559,16 +581,196 @@ def test_param_rows_are_data_only():
             break
         d = rec[4:0x40]
         f = lambda off, n=4: int.from_bytes(d[off:off + n], 'big', signed=True)   # noqa: E731
-        assert ROWS0 <= rid < ROWS and 0x10 <= f(0) <= 0x15, hex(rid)
-        assert f(4) not in stock_fx_k and 0 <= f(4) <= 100 and f(4) != 65, (hex(rid), f(4))
-        assert f(0x10) == 0 and f(0x18, 2) == -1 and f(0x1a, 2) == -1 and f(0x1c) == -1, hex(rid)
-        assert f(0x20) >= 0x400 and f(0x24) == 0, hex(rid)
+        assert ROWS0 <= rid < ROWS and f(0) == 0x14, hex(rid)
+        assert f(4) not in stock_fx_k and f(4) == 70 + rid - 0x141 and f(4) != 65, (hex(rid), f(4))
+        assert f(0x18, 2) == -1 and f(0x1a, 2) == -1 and f(0x1c) == -1, hex(rid)
+        assert f(0x20) == 0x400 + rid - 0x141 and f(0x24) == 0, hex(rid)
+        nm, sn, mx, df, fmt = want[rid]
+        assert (text(f(0x28) & 0xffffffff), text(f(0x30) & 0xffffffff)) == (nm, sn), hex(rid)
+        assert (f(8), f(0xc), f(0x10), f(0x14)) == (0, mx << 8, df << 8, 0), hex(rid)
+        assert f(0x34) & 0xffffffff == (smap[fmt] if isinstance(fmt, str) else fmt), hex(rid)
         look, fset, opts, page, slot = (int.from_bytes(rec[o:o + 4], 'big', signed=True)
                                         for o in (0x40, 0x44, 0x48, 0x4c, 0x50))
-        assert 0 <= look < ROWS0 and fset & 8 and not opts & 1 and page == -1, hex(rid)
-        seen += 1
+        assert look == 0x99 and fset & 8 and not opts & 1 and page == -1, hex(rid)
+        seen.append(rid)
         arr += 0x54
-    assert seen == 17
+    assert seen == list(range(0x141, 0x152))
+    # RAT's texts: "1.00", then the stock table's eight (read at run time, not copied)
+    ratios = [img[word(img, 0x401fe0e8 + 4 * i) - DEV.main_load:][:6].split(b'\0')[0] for i in range(8)]
+    assert ratios == [b'1.50', b'2.00', b'3.00', b'4.00', b'6.00', b'8.00', b'16.00', b'20.00']
+    assert b'1.00\0' in run
+    # the crossovers' tables: 30 Hz x (1000/30)^(v/127) in Hz and 1 kHz x 16^(v/127) in tenths of a
+    # kHz, rounded half up (the DSP's laws), each once in the RAM image
+    import math
+    lo = [int(math.floor(30.0 * (1000.0 / 30.0) ** (v / 127.0) + 0.5)) for v in range(128)]
+    hi = [int(math.floor(10.0 * 16.0 ** (v / 127.0) + 0.5)) for v in range(128)]
+    assert lo[68] == 196 and lo[127] == 1000 and hi[44] == 26 and hi[127] == 160
+    assert run.count(b''.join(x.to_bytes(2, 'big') for x in lo)) == 1
+    assert run.count(bytes(hi)) == 1
+
+
+# the band pages of comp-ui-dn2 (dn2-cfw notes/T6.4 2.1): id -> (short, long, A..H, LEVEL)
+COMP_PAGES = {40: ('COMP LOW', 'Compressor Low', [0x141, 0x143, 0x144, 0x145, 0x142, 0x146, 0x9b, 0x9e], 0x9f),
+              41: ('COMP MID', 'Compressor Mid', [0x147, 0x149, 0x14a, 0x14b, 0x148, 0x14c, 0x9b, 0x9e], 0x9f),
+              42: ('COMP HIGH', 'Compressor High', [0x14d, 0x14f, 0x150, 0x151, 0x14e, 0, 0x9b, 0x9e], 0x9f)}
+
+
+def test_requires_versions_and_numbered_claims():
+    """elemod's two rules for mods that build on each other (no stock file needed): a requires
+    entry 'id>=version' takes that version or a later one (dotted numbers compare numerically);
+    a resource name 'space:A' or 'space:A-B' (integers) conflicts with another mod's numbered claim
+    in the same space that shares a number; any other name only with the same name."""
+    class M:
+        def __init__(self, id_, version, names=(), requires=()):
+            self.id, self.version, self.names, self.requires = id_, version, list(names), list(requires)
+
+        def label(self):
+            return '%s %s' % (self.id, self.version)
+    assert elemod.require_parts('param-rows>=0.2') == ('param-rows', '0.2')
+    assert elemod.require_parts('core') == ('core', None)
+    assert elemod.version_key('0.10') > elemod.version_key('0.9') > elemod.version_key('0.2')
+    ui = M('comp-ui', '0.1', requires=['param-rows>=0.2'])
+    by = lambda *ms: {m.id: m for m in ms}                                   # noqa: E731
+    assert elemod.require_problem(ui, 'param-rows>=0.2', by(ui, M('param-rows', '0.2'))) is None
+    assert elemod.require_problem(ui, 'param-rows>=0.2', by(ui, M('param-rows', '0.10'))) is None
+    assert 'param-rows 0.2 or later' in elemod.require_problem(ui, 'param-rows>=0.2', by(ui, M('param-rows', '0.1')))
+    assert elemod.require_problem(ui, 'param-rows>=0.2', by(ui)) == 'comp-ui 0.1 requires param-rows>=0.2'
+    assert elemod.claim_span('dsp-reply:0x10-0x15') == ('dsp-reply', 0x10, 0x15)
+    assert elemod.claim_span('page:40') == ('page', 40, 40)
+    for name in ('settings:FAST AUDIO', 'drive:/cfw/a-b', 'timer:DTIM0', 'param-table', 'x:5-3'):
+        assert elemod.claim_span(name) is None, name
+    a = M('comp-ui', '0.1', ['page:40', 'dsp-reply:0x10-0x15'])
+    assert elemod.claim_problems([a, M('w', '1', ['dsp-reply:0x16', 'page:39', 'settings:X'])]) == []
+    assert elemod.claim_problems([a, M('w', '1', ['dsp-reply:0x04-0x13'])]) == [
+        'comp-ui 0.1 claims dsp-reply:0x10-0x15 and w 1 claims dsp-reply:0x04-0x13: both claim dsp-reply:0x10-0x13']
+    assert elemod.claim_problems([a, M('w', '1', ['page:38-41'])])
+    assert elemod.claim_problems([a, M('w', '1', ['dsp-reply:0x10-0x15'])]) == [
+        'comp-ui 0.1 and w 1 both claim dsp-reply:0x10-0x15']
+    assert elemod.claim_problems([M('s', '1', ['settings:FAST AUDIO']), M('t', '1', ['settings:FAST AUDIO'])])
+
+
+def test_core_page_records():
+    """core-dn2 0.2 owns the page-record accessor 0x400c25d8 (a jmp to core_pagerec in its RAM
+    image) and declares core_pagerecs, 8-byte entries {id, record}; alone it has none (one end
+    entry, id 0). The routine keeps the stock computation for ids 0..36 (moveq #36; cmp; bcc;
+    moveq #44; muls.l; addi.l #0x42433c00), keeps a0 (saved around the walk) and returns."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core], version='DC05', log=lambda *a: None)
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    smap = man['_map']
+    lay = man['link']['layout']
+    run_lo = lay['ddr'][0]
+    run = new[lay['run_load'] - DEV.main_load:]
+    o = 0x400c25d8 - DEV.main_load
+    assert img[o:o + 6].hex() == '7224202f0004'
+    assert new[o:o + 2] == b'\x4e\xf9' and word(new, 0x400c25d8 + 2) == smap['core_pagerec']
+    tab = man['link']['tables']['core_pagerecs']
+    assert tab['entry'] == 8 and tab['entries'] == 0
+    t = int(tab['at'], 16) - run_lo
+    assert run[t:t + 8] == bytes(8)
+    code = run[smap['core_pagerec'] - run_lo:][:0x36]
+    assert code[:8].hex() == '202f00047224b280'                 # move.l 4(sp),d0; moveq #36,d1; cmp.l
+    assert bytes.fromhex('2f08') in code and bytes.fromhex('205f') in code       # a0 pushed and popped
+    assert bytes.fromhex('722c4c01080006804243 3c00'.replace(' ', '')) in code   # the stock law
+    assert code.count(b'\x4e\x75') == 2                        # two returns
+
+
+def test_comp_ui_puts_three_band_pages_in_the_mixer_view():
+    """examples/comp-ui-dn2 with core 0.2, param-grow and param-rows 0.2: outside core's and
+    param-grow's sites only comp-ui's five change: the MIXER view's page count 5 -> 7 and its page
+    list -> {40, 41, 42, 21, 22, 23, 24} in the mod's RAM image; DUAL mode's EXT MIX 2 insert index
+    5 -> 7; MasterPageView's default draw case -> compui_draw; the page test in vslot47 ->
+    compui_baseid (a jsr and a nop). Its three records go to core_pagerecs (ids 40..42), each in
+    the stock layout with COW string titles (refcount -1), the band's rows on A..F (HIGH's F
+    empty) and the stock SCS, MIX and VOL rows on G, H and LEVEL. It claims page:40..42 and the
+    reply bytes it reads; without param-rows it is refused, and with param-rows 0.1 too (it requires
+    param-rows>=0.2: the ranges and texts of 0.2); a mod whose dsp-reply claim shares a byte with
+    comp-ui's is refused; with fx-page2 (which patches the accessor itself) core 0.2 is refused."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        grow = built(os.path.join('examples', 'param-grow-dn2'), tmp)
+        rows = built(os.path.join('examples', 'param-rows-dn2'), tmp)
+        ui = built(os.path.join('examples', 'comp-ui-dn2'), tmp)
+        page2 = built(os.path.join('examples', 'fx-page2-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core, grow, rows, ui], version='CMPX', log=lambda *a: None)
+        expect(lambda: patch.build(SYX, [core, grow, ui], version='XXXX', log=lambda *a: None),
+               'param-rows')
+        # param-rows as version 0.1 (the same mod, the version field rewritten): refused
+        with open(rows) as fh:
+            old = json.load(fh)
+        old['version'] = '0.1'
+        rows01 = write_mod(tmp, old, 'param-rows-as-0.1.elemod')
+        expect(lambda: patch.build(SYX, [core, grow, rows01, ui], version='XXXX', log=lambda *a: None),
+               'requires param-rows 0.2 or later', 'param-rows 0.1 is given')
+        # another mod (fx-rename, with a resource name added) that claims reply bytes 0x04..0x13: refused;
+        # one that claims 0x16..0x17 links
+        ren = built(os.path.join('examples', 'fx-rename-dn2'), tmp)
+        for claim, ok in (('dsp-reply:0x04-0x13', False), ('dsp-reply:0x16-0x17', True)):
+            with open(ren) as fh:
+                d = json.load(fh)
+            d.setdefault('resources', {}).setdefault('names', []).append(claim)
+            other = write_mod(tmp, d, 'fx-rename-claims.elemod')
+            go = lambda: patch.build(SYX, [core, grow, rows, ui, other], version='XXXX',  # noqa: E731
+                                     log=lambda *a: None)
+            if ok:
+                go()
+            else:
+                expect(go, 'dsp-reply:0x10-0x15', 'dsp-reply:0x04-0x13', 'both claim dsp-reply:0x10-0x13')
+        expect(lambda: patch.build(SYX, [core, page2], version='XXXX', log=lambda *a: None),
+               'overlap', '0x400c25d8')
+        with open(ui) as fh:
+            doc = json.load(fh)
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    smap = man['_map']
+    lay = man['link']['layout']
+    run_lo = lay['ddr'][0]
+    run = new[lay['run_load'] - DEV.main_load:]
+    rd = lambda a, n=4: int.from_bytes(run[a - run_lo:a - run_lo + n], 'big', signed=True)  # noqa: E731
+    here = os.path.dirname(HERE)
+    with open(os.path.join(here, 'examples', 'param-grow-dn2', 'mod.json')) as fh:
+        grow_sites = json.load(fh)['sites']
+    allowed = {s - DEV.main_load + k for s, _ in CORE_SITES for k in range(6)}
+    for s in grow_sites:
+        a = int(s['addr'], 16) - DEV.main_load
+        allowed |= set(range(a, a + len(s['stock']) // 2))
+    planned = {0x4006169c: '7207',
+               0x400616aa: '203c%08x' % smap['compui_pages'],
+               0x40070b84: '43e9001c',
+               0x4007093e: '4ef9%08x' % smap['compui_draw'],
+               0x4006ffc8: '4eb9%08x4e71' % smap['compui_baseid']}
+    stocks = {0x4006169c: '7205', 0x400616aa: '203c401e0434', 0x40070b84: '43e90014',
+              0x4007093e: '4ef940065a0c', 0x4006ffc8: '2068008824004e90'}
+    assert sorted(int(s['addr'], 16) for s in doc['sites']) == sorted(planned)
+    for a, hexnew in planned.items():
+        o = a - DEV.main_load
+        n = len(hexnew) // 2
+        assert img[o:o + n].hex() == stocks[a], hex(a)
+        assert new[o:o + n].hex() == hexnew, (hex(a), new[o:o + n].hex())
+        allowed |= set(range(o, o + n))
+    changed = {i for i in range(len(img)) if new[i] != img[i]}
+    assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
+    assert [rd(smap['compui_pages'] + 4 * i) for i in range(7)] == [40, 41, 42, 21, 22, 23, 24]
+    tab = man['link']['tables']['core_pagerecs']
+    assert tab['entries'] == 3
+    t = int(tab['at'], 16)
+    entries = [(rd(t + 8 * i), rd(t + 8 * i + 4) & 0xffffffff) for i in range(4)]
+    r0 = smap['compui_rec']
+    assert entries == [(40, r0), (41, r0 + 44), (42, r0 + 88), (0, 0)]
+    for i, (pid, (sname, lname, knobs, level)) in enumerate(COMP_PAGES.items()):
+        r = r0 + 44 * i
+        for p, txt in ((rd(r) & 0xffffffff, sname), (rd(r + 4) & 0xffffffff, lname)):
+            assert (rd(p - 12), rd(p - 8), rd(p - 4)) == (len(txt), len(txt), -1), (pid, txt)
+            assert run[p - run_lo:p - run_lo + len(txt) + 1] == txt.encode() + b'\0', (pid, txt)
+        assert [rd(r + 8 + 4 * k) for k in range(8)] == knobs and rd(r + 0x28) == level, pid
+    names = doc['resources']['names']
+    assert {'page:40', 'page:41', 'page:42', 'dsp-reply:0x10-0x15'} <= set(names)
+    assert doc['requires'] == ['core', 'param-grow', 'param-rows>=0.2']
+    assert not any(c['to'] == 'ev_tick' for c in doc['contribute'])     # nothing written at run time
+    gaps = man['output']['main']['inplace_gaps']
+    assert min(gaps.values()) > 0
 
 
 # ---- protected ranges -------------------------------------------------------------------------

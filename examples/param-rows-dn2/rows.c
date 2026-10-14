@@ -1,51 +1,104 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* param-rows (Digitone II OS 1.12): 17 parameter rows kept for a 3-band master compressor,
+/* param-rows (Digitone II OS 1.12): the 17 parameter rows of the 3-band master compressor,
  * through param-grow's table param_rows. EXPERIMENT: emulator-tested only (dn2-cfw
- * (github.com/naturarum/dn2-cfw) notes/T6.5-table-growth.md). For dn2-cfw's GT01 build.
+ * (github.com/naturarum/dn2-cfw) notes/T6.5-table-growth.md for 0.1, GT01;
+ * notes/T6.4-compressor-map-and-plan.md section 2.2 for 0.2, CMP1).
  *
- * The plan (the owner's): three pages, one per band (LOW, MID, HIGH), each with threshold,
- * ratio, attack, release and makeup; the crossovers on the LOW and MID pages; the stock
- * compressor's own rows reused where they fit. These rows are that plan's knobs, and nothing
- * yet: inert until a later mod puts them on pages and gives them a DSP.
+ * The design (the owner's): three pages, one per band (LOW, MID, HIGH), each with threshold,
+ * ratio, attack, release and makeup; the two crossovers on the LOW and MID pages; the stock
+ * compressor's own rows SCS, MIX and VOL shared by the three pages. comp-ui-dn2 puts these rows
+ * on those pages; a later mod (comp-link, CMP2) sends their values to the DSP.
  *
- * Inert, row by row (notes/T6.1-table-growth-study.md section 3.4):
- * - group 0x14 (the compressor's) in the FX set, each with its own k from 70..86. Those k
- *   are free in the FX set (stock rows use 25..69), so no stock row loses its slot in the
- *   map the OS builds at boot. The stock storage keeps only k 25..69 (stored ids 1..45), so
- *   these values are not saved: a kit that has them carries nothing new.
- * - default 0, as stock leaves every FX word it has no row for: a new kit is unchanged;
- * - display flags with bit 3 set (and bit 0 from the borrowed row): never p-lockable;
+ * 0.1 (GT01) kept the rows inert: default 0, range 0..127, plain numbers, placeholder names.
+ * 0.2 (CMP1) changes only data and the value texts, so the image below the stock end is still
+ * GT00's: the long names, the ranges, the new-kit defaults (the stock compressor's, per band) and
+ * the formatters:
+ *
+ *   row          k   name (header)       label  range   default        value text
+ *   0x141        70  Low Threshold       THR    0..127  32             plain number (stock)
+ *   0x142        71  Low Ratio           RAT    0..8    4 (4.00)       1.00 (band off), then the
+ *                                                                      stock 8: 1.50 2.00 3.00 4.00
+ *                                                                      6.00 8.00 16.00 20.00
+ *   0x143        72  Low Attack          ATK    0..127  24             plain number
+ *   0x144        73  Low Release         REL    0..127  32             plain number
+ *   0x145        74  Low Makeup          MUP    0..127  64 (12.1 dB)   the stock makeup text (dB)
+ *   0x146        75  Low/Mid X-Over      XOVR   0..127  68 (196 Hz)    30Hz .. 999Hz, 1.0k
+ *   0x147-0x14c  76-81  Mid ... (the same six; Mid/High X-Over default 44 = 2.6k, 1.0k .. 16.0k)
+ *   0x14d-0x151  82-86  High Threshold, Ratio, Attack, Release, Makeup (as LOW)
+ *
+ * Every row stays as the study's rules want an FX row (notes/T6.1-table-growth-study.md 3.4):
+ * - group 0x14 (the compressor's) in the FX set, each with its own k from 70..86, which no stock
+ *   row uses; the stock storage keeps only k 25..69, so a kit save does not keep these values
+ *   (CMP3 adds that) and a kit load leaves them as they were;
+ * - display flags with bit 3 set (and bit 0 from the borrowed row): never p-lockable (a lock on
+ *   an FX row would be stored as a lock on the track's sound slot with the same k);
  * - no randomiser (param-grow clears it), no MIDI CC, no NRPN, no modulation flags;
  * - Overbridge ids 0x400 + n, outside stock's 0..387;
- * - on no page.
- * Ranges, names and formatters are placeholders until the compressor is designed.
+ * - every knob borrows Makeup Gain's display entry (0x99): the stock default dial, the owner's
+ *   placeholder glyph;
+ * - on no page by param-grow's slot mechanism (comp-ui's page records place them).
+ * The defaults matter only where the OS sets a kit's FX words to the row defaults (a new kit,
+ * FUN_400e7140); a loaded kit keeps whatever the live words held.
  */
 #include "../param-grow-dn2/param_rows.h"
+#include "xover_table.h"
 
 #define K0 70                    /* the first FX slot: 70..86 */
-#define LOOK 0x99                /* Makeup Gain's display entry: the plain knob */
+#define LOOK 0x99                /* Makeup Gain's display entry: the stock default dial */
 
-#define COMP(n, nm, sn) \
-    { 0x141 + (n), { 0x14, K0 + (n), V(0), V(127), V(0), 0, -1, -1, -1, 0x400 + (n), 0, \
-                     nm, STR_MASTER, sn, FMT_NUMBER, STR_EMPTY }, LOOK, 8, 0, -1, -1 }
+/* Stock 1.12 addresses (checked by dn2-cfw's scripts/t63b_build.py) */
+#define FMT_DB          ((const void *)0x400e3b2e)   /* the makeup text: '%sdB' from 0x401fde4c */
+#define RATIO_TEXT      ((const char *const *)0x401fe0e8)  /* the 8 ratio texts, 1.50 .. 20.00 */
+#define SPRINTF         ((int (*)(char *, const char *, ...))0x40000e82)
+
+/* The value texts. The OS calls a formatter f(value << 8, char *out) (descriptor +0x34; from
+ * ParameterSet::vslot23 and 0x400c25a0) and the stock ones return what sprintf returns. */
+int param_rows_fmt_ratio(int value, char *out)
+{
+    int i = value >> 8;
+    if (i <= 0)
+        return SPRINTF(out, "1.00");
+    if (i > 8)
+        i = 8;
+    return SPRINTF(out, "%s", RATIO_TEXT[i - 1]);
+}
+
+static int knob(int value)
+{
+    int i = value >> 8;
+    return i < 0 ? 0 : i > 127 ? 127 : i;
+}
+
+int param_rows_fmt_xlo(int value, char *out)
+{
+    int hz = xover_lo_hz[knob(value)];
+    if (hz < 1000)
+        return SPRINTF(out, "%dHz", hz);
+    return SPRINTF(out, "%d.%dk", hz / 1000, hz % 1000 / 100);
+}
+
+int param_rows_fmt_xhi(int value, char *out)
+{
+    int dk = xover_hi_dk[knob(value)];
+    return SPRINTF(out, "%d.%dk", dk / 10, dk % 10);
+}
+
+#define ROW(n, nm, sn, mx, df, fmt) \
+    { 0x141 + (n), { 0x14, K0 + (n), V(0), V(mx), V(df), 0, -1, -1, -1, 0x400 + (n), 0, \
+                     nm, STR_MASTER, sn, fmt, STR_EMPTY }, LOOK, 8, 0, -1, -1 }
+
+#define BAND(n, b) \
+    ROW((n) + 0, b " Threshold", "THR", 127, 32, FMT_NUMBER), \
+    ROW((n) + 1, b " Ratio", "RAT", 8, 4, param_rows_fmt_ratio), \
+    ROW((n) + 2, b " Attack", "ATK", 127, 24, FMT_NUMBER), \
+    ROW((n) + 3, b " Release", "REL", 127, 32, FMT_NUMBER), \
+    ROW((n) + 4, b " Makeup", "MUP", 127, 64, FMT_DB)
 
 const struct param_row param_rows_comp[] __attribute__((aligned(4))) = {
-    COMP(0, "Low Threshold", "THR"),
-    COMP(1, "Low Ratio", "RAT"),
-    COMP(2, "Low Attack", "ATK"),
-    COMP(3, "Low Release", "REL"),
-    COMP(4, "Low Makeup", "MUP"),
-    COMP(5, "Low X-Over", "XOVR"),
-    COMP(6, "Mid Threshold", "THR"),
-    COMP(7, "Mid Ratio", "RAT"),
-    COMP(8, "Mid Attack", "ATK"),
-    COMP(9, "Mid Release", "REL"),
-    COMP(10, "Mid Makeup", "MUP"),
-    COMP(11, "Mid X-Over", "XOVR"),
-    COMP(12, "High Threshold", "THR"),
-    COMP(13, "High Ratio", "RAT"),
-    COMP(14, "High Attack", "ATK"),
-    COMP(15, "High Release", "REL"),
-    COMP(16, "High Makeup", "MUP"),
+    BAND(0, "Low"),
+    ROW(5, "Low/Mid X-Over", "XOVR", 127, 68, param_rows_fmt_xlo),
+    BAND(6, "Mid"),
+    ROW(11, "Mid/High X-Over", "XOVR", 127, 44, param_rows_fmt_xhi),
+    BAND(12, "High"),
     { 0 }
 };

@@ -21,8 +21,8 @@ made for different releases.
 | `title`, `description`, `category`, `author` | for people |
 | `license` | an SPDX identifier for the mod's own bytes, e.g. `GPL-2.0-or-later`; shown in the loader and by `lint` |
 | `sites` | changes to the stock image (below) |
-| `resources` | `regions`: run-time memory it claims, each inside one of the device's free areas; `names`: named resources such as `sysex:0x7d`, `settings:FAST AUDIO`, `drive:/cfw/slices.a` |
-| `requires`, `conflicts` | lists of mod ids |
+| `resources` | `regions`: run-time memory it claims, each inside one of the device's free areas; `names`: named resources such as `sysex:0x7d`, `settings:FAST AUDIO`, `drive:/cfw/slices.a`. Two mods may not claim the same name; a name that numbers what it claims, `space:A` or `space:A-B` (integers, `0x...` or decimal, A-B inclusive, e.g. `page:40`, `dsp-reply:0x10-0x15`), also conflicts with any other mod's numbered claim in the same space that shares a number |
+| `requires`, `conflicts` | lists of mod ids; a `requires` entry may name the lowest version it takes, `id>=version` (dotted numbers compare numerically: `param-rows>=0.2`) |
 | `signature` | reserved; `null` |
 
 A **site** is a change to the stock main OS:
@@ -130,7 +130,9 @@ and `core_projdata` (project data); 2.2 the event `ev_hold` and the table
 0x40032b3a, 0x40033d94, 0x40033dde and 0x400a5eac, a Digitakt II-only
 `ev_personalize` (0x4009e2a2, the PERSONALIZE menu, `void f(menu)`), and no
 render events (its audio renders on the DSP). It declares the `.fast` copy table itself,
-`core_fast`, and copies it on the first `ev_tick` (`mods/core/fast.s`).
+`core_fast`, and copies it on the first `ev_tick` (`mods/core/fast.s`). The Digitone II's core
+(core-dn2) has the Digitakt II core's events, two MIDI events, and from 0.2 the table
+`core_pagerecs` (page records, docs/ADAPTING.md).
 
 The core mod patches each shared site once. It calls the handlers
 subscribed to that event, from a table built by the linker, in order.

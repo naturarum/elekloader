@@ -276,6 +276,69 @@ def overlaps(spans):
     return out
 
 
+def require_parts(r):
+    """A `requires` entry: 'id' or 'id>=version' -> (id, the lowest version it takes, or None)."""
+    r = str(r)
+    if '>=' in r:
+        rid, low = r.split('>=', 1)
+        return rid.strip(), low.strip()
+    return r.strip(), None
+
+
+def version_key(v):
+    """'0.2' -> a key that orders dotted numbers numerically (0.10 after 0.9); any other version
+    orders as text, after every numeric one."""
+    try:
+        return (0,) + tuple(int(x) for x in str(v).split('.'))
+    except ValueError:
+        return (1, str(v))
+
+
+def require_problem(m, r, by_id):
+    """-> the problem with mod m's requirement r among the given mods {id: mod}, or None."""
+    rid, low = require_parts(r)
+    if rid not in by_id:
+        return '%s requires %s' % (m.label(), r)
+    if low is not None and version_key(by_id[rid].version) < version_key(low):
+        return '%s requires %s %s or later, and %s is given' % (m.label(), rid, low, by_id[rid].label())
+    return None
+
+
+def claim_span(name):
+    """A resource name that numbers what it claims: 'space:A' or 'space:A-B' (integers, 0x... or
+    decimal; A-B inclusive) -> (space, A, B). Any other name -> None: it is matched exactly."""
+    space, sep, rest = str(name).partition(':')
+    if not sep or not space:
+        return None
+    lo, dash, hi = rest.partition('-')
+    try:
+        a = int(lo, 0)
+        b = int(hi, 0) if dash else a
+    except ValueError:
+        return None
+    return (space, a, b) if a <= b else None
+
+
+def claim_problems(mods):
+    """Two mods may not claim the same named resource; numbered claims in the same space
+    ('dsp-reply:0x10-0x15' and 'dsp-reply:0x04-0x13') may not share a number either."""
+    bad, owner, spans = [], {}, []
+    for m in mods:
+        for nm in m.names:
+            if nm in owner and owner[nm] is not m:
+                bad.append('%s and %s both claim %s' % (owner[nm].label(), m.label(), nm))
+            owner[nm] = m
+            sp = claim_span(nm)
+            if sp is not None:
+                spans.append((sp, nm, m))
+    for i, (a, an, am) in enumerate(spans):
+        for b, bn, bm in spans[i + 1:]:
+            if am is not bm and an != bn and a[0] == b[0] and a[1] <= b[2] and b[1] <= a[2]:
+                bad.append('%s claims %s and %s claims %s: both claim %s:0x%x-0x%x'
+                           % (am.label(), an, bm.label(), bn, a[0], max(a[1], b[1]), min(a[2], b[2])))
+    return bad
+
+
 def same_target(mods):
     """-> problems if the mods were made for different firmware."""
     ts = {(m.dev.key, m.rel.version) for m in mods}
@@ -293,10 +356,12 @@ def common_checks(mods, image, spans):
     for i in sorted(set(ids)):
         if ids.count(i) > 1:
             bad.append('mod %s is given %d times' % (i, ids.count(i)))
+    by_id = {m.id: m for m in mods}
     for m in mods:
         for r in m.requires:
-            if r not in ids:
-                bad.append('%s requires %s' % (m.label(), r))
+            p = require_problem(m, r, by_id)
+            if p:
+                bad.append(p)
         for c in m.conflicts:
             if c in ids:
                 bad.append('%s conflicts with %s' % (m.label(), c))
@@ -305,12 +370,7 @@ def common_checks(mods, image, spans):
             continue
         bad.append('%s %s and %s %s overlap (0x%08x-0x%08x)'
                    % (a[2].label(), a[3], b[2].label(), b[3], b[0], min(a[1], b[1])))
-    owner = {}
-    for m in mods:
-        for nm in m.names:
-            if nm in owner and owner[nm] is not m:
-                bad.append('%s and %s both claim %s' % (owner[nm].label(), m.label(), nm))
-            owner[nm] = m
+    bad += claim_problems(mods)
     if bad and bad[0].startswith('the mods are for different firmware'):
         return bad
     dev = mods[0].dev
@@ -343,7 +403,7 @@ def summarize(problems, mods):
     - repeats are merged, with a count;
     - "no .boot" says that core is not enabled."""
     ids = {m.id for m in mods}
-    lacking = {m.label() for m in mods if any(r not in ids for r in m.requires)}
+    lacking = {m.label() for m in mods if any(require_parts(r)[0] not in ids for r in m.requires)}
     out, count = [], {}
     for x in problems:
         if any(x.startswith(lab + ' ') and any(f in x for f in FOLLOW_ON) for lab in lacking):

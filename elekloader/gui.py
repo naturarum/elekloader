@@ -65,7 +65,7 @@ def with_requirements(descs, enabled, path):
     todo = [path]
     while todo:
         d = descs.get(todo.pop(), {})
-        for rid in d.get('requires', []):
+        for rid in (elemod.require_parts(r)[0] for r in d.get('requires', [])):
             if any(descs.get(p, {}).get('id') == rid for p in out):
                 continue
             cands = sorted((p for p, x in descs.items()
@@ -239,7 +239,7 @@ class LoaderModel:
                     lab = d['label']
                     mine = [x for x in lines if lab in x or x.startswith(d['id'] + ' ')]
                     needs = [r for r in d.get('requires', [])
-                             if not any(descs[q].get('id') == r for q in paths)]
+                             if not any(descs[q].get('id') == elemod.require_parts(r)[0] for q in paths)]
                     if needs:
                         status[p] = ('warn', 'Needs ' + ', '.join(needs))
                     elif mine:
@@ -792,11 +792,12 @@ class LoaderWindow:
         if not d.get('requires'):
             out.append(('Nothing.\n', 'm'))
         for r in d.get('requires', []):
-            ok = r in ids
+            ok = elemod.require_parts(r)[0] in ids
             out += [('\u2713 ' if ok else '\u2717 ', 'ok' if ok else 'bad'),
                     ('%s  %s\n' % (r, 'enabled' if ok else 'not enabled'), '' if ok else 'bad')]
         needed_by = sorted(self.descs[p].get('title', '') for p in self.enabled
-                           if d.get('id') in self.descs[p].get('requires', []))
+                           if d.get('id') in [elemod.require_parts(r)[0]
+                                              for r in self.descs[p].get('requires', [])])
         out += [('\nRequired by (enabled)', 'h'), ('\n' + ('\n'.join(needed_by) or 'None.') + '\n', 'm')]
         if d.get('conflicts'):
             out += [('\nIncompatible with', 'h'), ('\n' + '\n'.join(d['conflicts']) + '\n', 'm')]

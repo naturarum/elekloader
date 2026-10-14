@@ -2,8 +2,9 @@
 
 The boot copier and the hook bus for Digitone II OS 1.12. Every set of
 linkable (format 2) mods for the Digitone II needs it. On its own it changes
-nothing the unit does. Experimental: version 0.1, checked in digikit's
-emulator only, never run on a unit.
+nothing the unit does. Experimental: version 0.1 ran on a unit (dn2-cfw's
+DH01, FTN1, GT00, GT01); version 0.2 adds page records for mods and is
+checked in digikit's emulator only.
 
 It builds the shared [../core/core.s](../core/core.s),
 [settings.s](../core/settings.s) and [fast.s](../core/fast.s) and the
@@ -52,16 +53,43 @@ II's addresses (`mod.json`), and its own [midi.s](midi.s). The render hooks
   and its `ev_tick` handler copies every mod's `.fast` section into the SRAM
   tail (0x8000F980-0x80010000, 1,664 bytes) on the first tick, once.
 
+- **Page records** (0.2, `pagerec.s`): a parameter page (the eight knobs
+  and LEVEL of a SYN, FLTR, FX or MIXER page) is a 44-byte record, found by
+  its page id through one routine, 0x400c25d8 (20 direct callers): ids 0..36
+  are the stock records, `0x42433c00 + 44 x id`; any other id gets the record
+  before the table. Two mods cannot both patch that routine, so core owns it
+  (a `jmp` at its entry, to `core_pagerec`) and serves the ids mods register
+  in the table `core_pagerecs`, entries of 8 bytes `{id, record}`:
+
+  ```json
+  "contribute": [{"to": "core_pagerecs", "order": 50, "data": "0000002800000000",
+                  "relocs": [[4, "abs32", "sym:my_rec", 0]]}],
+  "resources": {"names": ["page:40"]}
+  ```
+
+  Ids 0..36 go the stock way, instruction for instruction; an unregistered
+  id gets the stock fallback. The record is in the stock layout (+0 short and
+  +4 long title, COW `std::string` data pointers; +8 the row ids of A..H, 0
+  for an empty box; +0x28 LEVEL's row). The routine changes only d0 and d1,
+  as stock does: its callers keep values in a0 and a1. A page in a view's
+  page list (the view's constructor builds it from an array) shows with the
+  stock drawing; `examples/comp-ui-dn2` adds three MIXER pages this way.
+  Ids in use: 37 (`examples/fx-page2-dn2`, which patches 0x400c25d8 itself
+  and so cannot be combined with core 0.2), 40-42 (`comp-ui-dn2`).
+
 Build it with the SDK (with Homebrew's `m68k-elf-binutils`, set
 `ELEKLOADER_CROSS=m68k-elf-`):
 
 ```bash
-python -m elekloader.sdk.build mods/core-dn2 --stock Digitone_II_OS1_12.syx      # out/core-0.1.elemod
-python -m elekloader.lint mods/core-dn2/out/core-0.1.elemod --stock Digitone_II_OS1_12.syx
+python -m elekloader.sdk.build mods/core-dn2 --stock Digitone_II_OS1_12.syx      # mods/core-dn2/out/core-0.2.elemod
+python -m elekloader.lint mods/core-dn2/out/core-0.2.elemod --stock Digitone_II_OS1_12.syx
 ```
 
 Checked in digikit's emulator (6 Oct 2026), by cold boots of the built
 files: core alone boots to the same main screen as stock, and with
 [examples/midi-hooktest-dn2](../../examples/midi-hooktest-dn2) the
 sequencer's MIDI notes on DIN out are an octave up with their velocity set
-to their step, at the same times as stock's. Not run on a unit.
+to their step, at the same times as stock's. 0.1 then ran on a unit inside
+dn2-cfw's builds (2026-10-13). 0.2 (13 Oct 2026): with comp-ui-dn2, a cold
+boot to the main screen and the band pages in the emulator (dn2-cfw's
+CMP1 build); not run on a unit.

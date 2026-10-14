@@ -131,7 +131,8 @@ the tick site runs first). The sites core owns (do not patch them):
   0x40033dde, 0x400a5eac, 0x4009e2a2;
 - Digitone II 1.12 (core-dn2 0.1): 0x40000538, 0x4002e464, 0x4002e4ca,
   0x4002f20c, 0x4002f256, 0x4009ff88, 0x400987a2, and its MIDI events'
-  0x400da0b2, 0x400d9230 and 0x4012b490.
+  0x400da0b2, 0x400d9230 and 0x4012b490; from core-dn2 0.2 also
+  0x400c25d8, the page-record routine ("Page records", below).
 
 A firmware routine your mod calls has its own address on each device and
 each OS version: look it up for the release you target, and build one
@@ -262,6 +263,33 @@ while the page is on screen with nothing (a menu, a browser) over it.
 Core-dn1 2.1 owns two more sites, by jmp at their entries: 0x40089a2c, the
 page record lookup (`core_page_rec`), and 0x40044490, the routine each
 view's constructor gives its page list to (`core_view_init`).
+
+### Page records (core-dn2 0.2, Digitone II)
+
+A Digitone II parameter page (a SYN, FLTR, FX or MIXER page) is a 44-byte
+record: +0 its short title and +4 its long title (COW `std::string` data
+pointers: the text, with length, capacity and reference count in the 12
+bytes before it; a reference count of -1 marks a string the OS copies and
+never frees), +8 the row ids of knobs A to H (0 is an empty box) and +0x28
+LEVEL's row. The OS finds a record by page id through one routine,
+0x400c25d8: ids 0-36 are the stock pages. From core-dn2 0.2 core owns that
+routine, and a mod registers a page of its own with an 8-byte entry in the
+table `core_pagerecs`:
+
+```json
+"contribute": [{"to": "core_pagerecs", "order": 50, "data": "0000002800000000",
+                "relocs": [[4, "abs32", "sym:my_rec", 0]]}],
+"resources": {"names": ["page:40"]}
+```
+
+`{id, record}`: an id from 37 up, claimed as the resource `page:<id>`, and
+the record in the mod's `.run`. The stock pages are served as before. To
+show the page, a mod still puts its id in a view's page list (each view's
+constructor builds its list from an array in the image, with a count):
+`examples/comp-ui-dn2` puts ids 40-42 first in the MIXER view's list and
+draws their extra box from the view's draw switch. A mod that patched
+0x400c25d8 itself (`examples/fx-page2-dn2` 0.1) cannot be combined with
+core-dn2 0.2.
 
 ### Project data (core-dn1 2.1, Digitone mk1)
 

@@ -1,10 +1,11 @@
 {
- "id": "core", "version": "0.1",
+ "id": "core", "version": "0.2",
  "license": "GPL-2.0-or-later",
  "title": "core", "category": "Framework", "author": "naturarum",
- "description": "The boot copier and the hook bus for the Digitone II: every other mod needs it. The Digitakt II core's events, plus two MIDI events (a MIDI-machine trig built by the sequencer, and each MIDI note the unit sends). On its own it changes nothing the unit does. Experimental: checked in an emulator only.",
+ "description": "The boot copier and the hook bus for the Digitone II: every other mod needs it. The Digitakt II core's events, plus two MIDI events (a MIDI-machine trig built by the sequencer, and each MIDI note the unit sends), and from 0.2 page records for mods (the table core_pagerecs: a mod registers a page id from 37 up and its record, and the OS's page-record routine serves it). On its own it changes nothing the unit does. 0.1 ran on a unit; 0.2 is checked in an emulator only.",
  "device": "digitone-mk2", "os": "1.12",
- "sources": ["../core/core.s", "../core/settings.s", "../core/fast.s", "../core-dt2/personalize.s", "midi.s"],
+ "sources": ["../core/core.s", "../core/settings.s", "../core/fast.s", "../core-dt2/personalize.s", "midi.s",
+             "pagerec.s"],
  "defsym": {
   "DRAWALL": "0x4011d60a",
   "KEYDISP": "0x4002c5c8",
@@ -17,7 +18,8 @@
   "NO_DTIM0": "1",
   "VBR_FN": "0x400019b0",
   "MIDI_BUILD": "0x400d8cbe",
-  "VEL_SLOT": "56"
+  "VEL_SLOT": "56",
+  "PAGE_RECS": "0x42433c00"
  },
  "sites": [
   {"addr": "0x40000538", "stock": "4eb9400019b0", "op": "jsr", "target": "boot"},
@@ -29,9 +31,11 @@
   {"addr": "0x400987a2", "stock": "4cef7c7c0018", "op": "jmp", "target": "core_personalize"},
   {"addr": "0x400da0b2", "stock": "2f024ebaec08", "op": "jsr", "target": "core_midistep"},
   {"addr": "0x400d9230", "stock": "2f024ebafa8a", "op": "jsr", "target": "core_midistep"},
-  {"addr": "0x4012b490", "stock": "727fc2802841", "op": "jsr", "target": "core_midinote"}
+  {"addr": "0x4012b490", "stock": "727fc2802841", "op": "jsr", "target": "core_midinote"},
+  {"addr": "0x400c25d8", "stock": "7224202f0004", "op": "jmp", "target": "core_pagerec"}
  ],
  "subscribe": [{"event": "ev_tick", "fn": "core_fastcopy", "order": 0}],
  "collections": {"ev_tick": 4, "ev_draw": 4, "ev_key": 4, "ev_enc": 4, "ev_settings": 4,
-                 "ev_personalize": 4, "ev_midi_step": 4, "ev_midi_note": 4, "core_fast": 16}
+                 "ev_personalize": 4, "ev_midi_step": 4, "ev_midi_note": 4, "core_fast": 16,
+                 "core_pagerecs": 8}
 }
