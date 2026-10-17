@@ -773,6 +773,66 @@ def test_comp_ui_puts_three_band_pages_in_the_mixer_view():
     assert min(gaps.values()) > 0
 
 
+
+def test_comp_link_writes_the_frame_tail():
+    """examples/comp-link-dn2 0.1 with core 0.2, param-grow, param-rows 0.2 and comp-ui: outside core's,
+    param-grow's and comp-ui's sites only its one site changes, the frame handler's driver call at
+    0x40025e9e (jsr 0x400cf922 -> jsr compl_tail). compl_tail is 90 bytes in .run: it tests DSPI2 SR's
+    EOQF (bit 28) first, keeps its sequence in .bss (compl_seq, named twice) and ends in a jmp to the
+    driver, so the driver's rts returns into the handler. It claims the tail bytes 0xa80..0xabb and the
+    spare FX words k 87..96; a mod claiming one tail byte is refused, and without param-rows it is."""
+    with tempfile.TemporaryDirectory() as tmp:
+        core = built(os.path.join('mods', 'core-dn2'), tmp)
+        grow = built(os.path.join('examples', 'param-grow-dn2'), tmp)
+        rows = built(os.path.join('examples', 'param-rows-dn2'), tmp)
+        ui = built(os.path.join('examples', 'comp-ui-dn2'), tmp)
+        link = built(os.path.join('examples', 'comp-link-dn2'), tmp)
+        outputs, man = patch.build(SYX, [core, grow, rows, ui, link], version='CMPY', log=lambda *a: None)
+        expect(lambda: patch.build(SYX, [core, grow, link], version='XXXX', log=lambda *a: None), 'param-rows')
+        ren = built(os.path.join('examples', 'fx-rename-dn2'), tmp)
+        with open(ren) as fh:
+            d = json.load(fh)
+        d.setdefault('resources', {}).setdefault('names', []).append('spi-tail:0xab8-0xab9')
+        other = write_mod(tmp, d, 'fx-rename-claims-tail.elemod')
+        expect(lambda: patch.build(SYX, [core, grow, rows, ui, link, other], version='XXXX', log=lambda *a: None),
+               'spi-tail:0xa80-0xabb', 'spi-tail:0xab8-0xab9')
+        with open(link) as fh:
+            doc = json.load(fh)
+        with open(ui) as fh:
+            ui_doc = json.load(fh)
+    st, img = stock()
+    new = formats.main_image(formats.parse(outputs['syx'], DEV), DEV)
+    smap = man['_map']
+    lay = man['link']['layout']
+    run_lo = lay['ddr'][0]
+    run = new[lay['run_load'] - DEV.main_load:]
+    here = os.path.dirname(HERE)
+    with open(os.path.join(here, 'examples', 'param-grow-dn2', 'mod.json')) as fh:
+        grow_sites = json.load(fh)['sites']
+    with open(os.path.join(here, 'examples', 'comp-ui-dn2', 'mod.json')) as fh:
+        ui_sites = json.load(fh)['sites']
+    assert sorted(s['addr'] for s in ui_sites) == sorted(s['addr'] for s in ui_doc['sites'])
+    allowed = {s - DEV.main_load + k for s, _ in CORE_SITES for k in range(6)}
+    for s in grow_sites + ui_sites:
+        a = int(s['addr'], 16) - DEV.main_load
+        allowed |= set(range(a, a + len(s['stock']) // 2))
+    site = 0x40025e9e - DEV.main_load
+    assert [s['addr'] for s in doc['sites']] == ['0x40025e9e']
+    assert img[site:site + 6].hex() == '4eb9400cf922'
+    assert new[site:site + 6].hex() == '4eb9%08x' % smap['compl_tail']
+    allowed |= set(range(site, site + 6))
+    changed = {i for i in range(len(img)) if new[i] != img[i]}
+    assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
+    t = smap['compl_tail']
+    code = run[t - run_lo:t - run_lo + 90]
+    assert code[:10].hex() == '2039ec03802c0800001c'           # move.l DSPI2_SR,d0; btst #28,d0
+    assert code[-6:].hex() == '4ef9400cf922'                   # jmp the driver
+    assert code.count(smap['compl_seq'].to_bytes(4, 'big')) == 2
+    assert lay['bss'][0] <= smap['compl_seq'] < lay['bss'][1]
+    assert set(doc['resources']['names']) == {'spi-tail:0xa80-0xabb', 'fx-k:87-96'}
+    assert doc['requires'] == ['core', 'param-grow', 'param-rows>=0.2']
+    assert not doc.get('contribute')
+
 # ---- protected ranges -------------------------------------------------------------------------
 
 def test_the_panel_firmware_range_is_what_the_updater_sends():

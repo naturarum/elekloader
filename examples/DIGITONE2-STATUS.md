@@ -6,12 +6,13 @@ unchanged so the builds stay byte-for-byte reproducible. This file holds the cur
 
 | example | status |
 |---|---|
-| `mods/core-dn2` | 0.1 **ran on a unit** (2026-10-13): in DH01, FTN1, GT00, GT01. 0.2 (page records, `core_pagerecs`): emulator only so far (CMP1, 2026-10-13) |
+| `mods/core-dn2` | 0.1 **ran on a unit** (2026-10-13): in DH01, FTN1, GT00, GT01. 0.2 (page records, `core_pagerecs`) **ran on a unit** (CMP1, 2026-10-14) |
 | `midi-hooktest-dn2` | **ran on a unit** (DH01, 2026-10-13); its MIDI-out effect not yet watched there |
 | `fx-rename-dn2` | **ran on a unit** (FTN1, 2026-10-13): every name displays correctly |
 | `param-grow-dn2` | **ran on a unit** (GT00, 2026-10-13): normal use, +Drive save and load, cold start |
-| `param-rows-dn2` | 0.1 **ran on a unit** (GT01, 2026-10-13). 0.2 (the band rows' names, ranges, defaults and texts): emulator only so far (CMP1) |
-| `comp-ui-dn2` | emulator only so far (CMP1, 2026-10-13): the three band pages in the MIXER view; needs core 0.2 |
+| `param-rows-dn2` | 0.1 **ran on a unit** (GT01, 2026-10-13). 0.2 (the band rows' names, ranges, defaults and texts): **ran on a unit** (CMP1, 2026-10-14) |
+| `comp-ui-dn2` | **ran on a unit** (CMP1, 2026-10-14): the three band pages in the MIXER view; needs core 0.2 |
+| `comp-link-dn2` | emulator only so far (CMP2, 2026-10-17): the band knobs k 70..86 to the DSP in the SPI frame tail (one site, 0x40025e9e); needs param-rows 0.2 |
 | `fx-echo-dn2` | emulator only so far (SE01, brick checker 12/12, 2026-10-13); AGE's label does not show its value while turning (known, minor) |
 | `param-test-dn2` | emulator only. **Never flash it** |
 | `fx-page2-dn2` | emulator only. It patches the page-record routine 0x400c25d8 itself, so it links only with core 0.1 (0.2 owns that routine). **Never flash it**: it borrows rows that carry MIDI CCs, and its SHPE row copies a lockable display entry, so a p-lock on it would be saved as a lock on the track's sound slot 70 (dn2-cfw `notes/T6.1-table-growth-study.md`) |

@@ -1,0 +1,18 @@
+{
+ "id": "comp-link",
+ "version": "0.1",
+ "title": "3-band compressor knobs to the DSP (CMP2)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only. Sends the 3-band compressor's band knobs (FX k 70..86, with the spare k 87..96) to the DSP in the tail of every SPI frame: 30 words in frame bytes 0xa80..0xabb, which the stock driver sends but never fills (a magic word, a sequence number, the 27 smoothed values, a check word). It writes them only between transfers, so a frame on the wire is never changed. Nothing changes the sound unless the DSP reads the tail (dn2-cfw's CMP2 and later); with a stock DSP the tail is ignored. The values are not saved with the kit (CMP3). Needs core, param-grow and param-rows 0.2. For dn2-cfw's CMP2 build.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": ["tail.s"],
+ "sites": [
+  {"addr": "0x40025e9e", "stock": "4eb9400cf922", "op": "jsr", "target": "compl_tail",
+   "note": "FUN_40025e36 (the vector-191 frame handler): jsr 0x400cf922, the DSPI2 driver call; compl_tail writes the tail, then jumps to the driver"}
+ ],
+ "resources": {"names": ["spi-tail:0xa80-0xabb", "fx-k:87-96"]},
+ "requires": ["core", "param-grow", "param-rows>=0.2"]
+}
