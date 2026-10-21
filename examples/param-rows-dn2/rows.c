@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* param-rows (Digitone II OS 1.12): the 17 parameter rows of the 3-band master compressor,
+/* param-rows (Digitone II OS 1.12): the 20 parameter rows of the 3-band master compressor,
  * through param-grow's table param_rows. EXPERIMENT: emulator-tested only (dn2-cfw
  * (github.com/naturarum/dn2-cfw) notes/T6.5-table-growth.md for 0.1, GT01;
- * notes/T6.4-compressor-map-and-plan.md section 2.2 for 0.2, CMP1).
+ * notes/T6.4-compressor-map-and-plan.md section 2.2 for 0.2, CMP1; notes/T6.3-cmp3.md for 0.3, CMP3).
  *
  * The design (the owner's): three pages, one per band (LOW, MID, HIGH), each with threshold,
  * ratio, attack, release and makeup; the two crossovers on the LOW and MID pages; the stock
@@ -26,16 +26,27 @@
  *   0x147-0x14c  76-81  Mid ... (the same six; Mid/High X-Over default 44 = 2.6k, 1.0k .. 16.0k)
  *   0x14d-0x151  82-86  High Threshold, Ratio, Attack, Release, Makeup (as LOW)
  *
+ * 0.3 (CMP3) adds three rows after them, a dry/wet mix per band, copied from the stock MIX row 0x9e
+ * (k 67): the same range, text (a plain number) and display entry (look 0x9e), new-kit default 0 (dry,
+ * as the stock MIX):
+ *
+ *   0x152        87  Low Mix             MIX    0..127  0              plain number (stock MIX's)
+ *   0x153        88  Mid Mix             MIX    0..127  0
+ *   0x154        89  High Mix            MIX    0..127  0
+ *
+ * comp-ui-dn2 0.2 puts each on its band page's H, in place of the stock MIX; comp-link-dn2 sends k 70..96
+ * to the DSP (k 87..89 are its tail words 19..21) and, from 0.2, keeps them in the kit.
+ *
  * Every row stays as the study's rules want an FX row (notes/T6.1-table-growth-study.md 3.4):
- * - group 0x14 (the compressor's) in the FX set, each with its own k from 70..86, which no stock
- *   row uses; the stock storage keeps only k 25..69, so a kit save does not keep these values
- *   (CMP3 adds that) and a kit load leaves them as they were;
+ * - group 0x14 (the compressor's) in the FX set, each with its own k from 70..89, which no stock
+ *   row uses; the stock storage keeps only k 25..69, so a stock kit save does not keep these values
+ *   (comp-link-dn2 0.2 adds that) and a stock kit load leaves them as they were;
  * - display flags with bit 3 set (and bit 0 from the borrowed row): never p-lockable (a lock on
  *   an FX row would be stored as a lock on the track's sound slot with the same k);
  * - no randomiser (param-grow clears it), no MIDI CC, no NRPN, no modulation flags;
  * - Overbridge ids 0x400 + n, outside stock's 0..387;
- * - every knob borrows Makeup Gain's display entry (0x99): the stock default dial, the owner's
- *   placeholder glyph;
+ * - every knob but the three mixes borrows Makeup Gain's display entry (0x99): the stock default
+ *   dial, the owner's placeholder glyph; the mixes borrow the stock MIX's (0x9e);
  * - on no page by param-grow's slot mechanism (comp-ui's page records place them).
  * The defaults matter only where the OS sets a kit's FX words to the row defaults (a new kit,
  * FUN_400e7140); a loaded kit keeps whatever the live words held.
@@ -43,7 +54,7 @@
 #include "../param-grow-dn2/param_rows.h"
 #include "xover_table.h"
 
-#define K0 70                    /* the first FX slot: 70..86 */
+#define K0 70                    /* the first FX slot: 70..89 */
 #define LOOK 0x99                /* Makeup Gain's display entry: the stock default dial */
 
 /* Stock 1.12 addresses (checked by dn2-cfw's scripts/t63b_build.py) */
@@ -83,9 +94,11 @@ int param_rows_fmt_xhi(int value, char *out)
     return SPRINTF(out, "%d.%dk", dk / 10, dk % 10);
 }
 
-#define ROW(n, nm, sn, mx, df, fmt) \
+#define ROWL(n, nm, sn, mx, df, fmt, look) \
     { 0x141 + (n), { 0x14, K0 + (n), V(0), V(mx), V(df), 0, -1, -1, -1, 0x400 + (n), 0, \
-                     nm, STR_MASTER, sn, fmt, STR_EMPTY }, LOOK, 8, 0, -1, -1 }
+                     nm, STR_MASTER, sn, fmt, STR_EMPTY }, look, 8, 0, -1, -1 }
+#define ROW(n, nm, sn, mx, df, fmt) ROWL(n, nm, sn, mx, df, fmt, LOOK)
+#define LOOK_MIX 0x9e            /* the stock MIX row's display entry */
 
 #define BAND(n, b) \
     ROW((n) + 0, b " Threshold", "THR", 127, 32, FMT_NUMBER), \
@@ -100,5 +113,8 @@ const struct param_row param_rows_comp[] __attribute__((aligned(4))) = {
     BAND(6, "Mid"),
     ROW(11, "Mid/High X-Over", "XOVR", 127, 44, param_rows_fmt_xhi),
     BAND(12, "High"),
+    ROWL(17, "Low Mix", "MIX", 127, 0, FMT_NUMBER, LOOK_MIX),
+    ROWL(18, "Mid Mix", "MIX", 127, 0, FMT_NUMBER, LOOK_MIX),
+    ROWL(19, "High Mix", "MIX", 127, 0, FMT_NUMBER, LOOK_MIX),
     { 0 }
 };

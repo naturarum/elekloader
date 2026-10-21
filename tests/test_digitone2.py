@@ -532,12 +532,13 @@ def test_param_grow_moves_the_table_and_its_bounds_only():
 def test_param_rows_are_data_only():
     """examples/param-rows-dn2 on top of core and param-grow changes nothing below the stock image's
     end (its rows and value texts are data and code in its RAM image), and each of its 17 rows is
-    an FX row as the study's rules want: a k no stock FX row has (70..86, in order), no MIDI CC or
+    an FX row as the study's rules want: a k no stock FX row has (70..89, in order), no MIDI CC or
     NRPN, no modulation flags, display flag bit 3 set (never p-lockable), no randomiser kept, an
     Overbridge id from 0x400, on no page by param-grow. From 0.2 (CMP1): the names, ranges,
     new-kit defaults (the stock compressor's) and value texts of the 3-band compressor's knobs
     (dn2-cfw notes/T6.4 2.2): RAT 0..8 (1.00, then the stock ratio texts), the crossovers' texts
-    from tables that follow the DSP's laws."""
+    from tables that follow the DSP's laws. From 0.3 (CMP3): Low, Mid and High Mix (k 87..89), the
+    stock MIX row's range, text and display entry (0x9e), default 0."""
     with tempfile.TemporaryDirectory() as tmp:
         core = built(os.path.join('mods', 'core-dn2'), tmp)
         grow = built(os.path.join('examples', 'param-grow-dn2'), tmp)
@@ -571,6 +572,8 @@ def test_param_rows_are_data_only():
             want[0x141 + 6 * b + i] = (band + ' ' + nm, sn, mx, df, fmt)
     want[0x146] = ('Low/Mid X-Over', 'XOVR', 127, 68, 'param_rows_fmt_xlo')
     want[0x14c] = ('Mid/High X-Over', 'XOVR', 127, 44, 'param_rows_fmt_xhi')
+    for b, band in enumerate(('Low', 'Mid', 'High')):
+        want[0x152 + b] = (band + ' Mix', 'MIX', 127, 0, plain)
     at = man1['link']['tables']['param_rows']['at']
     arr = int.from_bytes(run[int(at, 16) - run_lo:int(at, 16) - run_lo + 4], 'big')
     seen = []
@@ -591,10 +594,10 @@ def test_param_rows_are_data_only():
         assert f(0x34) & 0xffffffff == (smap[fmt] if isinstance(fmt, str) else fmt), hex(rid)
         look, fset, opts, page, slot = (int.from_bytes(rec[o:o + 4], 'big', signed=True)
                                         for o in (0x40, 0x44, 0x48, 0x4c, 0x50))
-        assert look == 0x99 and fset & 8 and not opts & 1 and page == -1, hex(rid)
+        assert look == (0x9e if rid >= 0x152 else 0x99) and fset & 8 and not opts & 1 and page == -1, hex(rid)
         seen.append(rid)
         arr += 0x54
-    assert seen == list(range(0x141, 0x152))
+    assert seen == list(range(0x141, 0x155))
     # RAT's texts: "1.00", then the stock table's eight (read at run time, not copied)
     ratios = [img[word(img, 0x401fe0e8 + 4 * i) - DEV.main_load:][:6].split(b'\0')[0] for i in range(8)]
     assert ratios == [b'1.50', b'2.00', b'3.00', b'4.00', b'6.00', b'8.00', b'16.00', b'20.00']
@@ -610,9 +613,10 @@ def test_param_rows_are_data_only():
 
 
 # the band pages of comp-ui-dn2 (dn2-cfw notes/T6.4 2.1): id -> (short, long, A..H, LEVEL)
-COMP_PAGES = {40: ('COMP LOW', 'Compressor Low', [0x141, 0x143, 0x144, 0x145, 0x142, 0x146, 0x9b, 0x9e], 0x9f),
-              41: ('COMP MID', 'Compressor Mid', [0x147, 0x149, 0x14a, 0x14b, 0x148, 0x14c, 0x9b, 0x9e], 0x9f),
-              42: ('COMP HIGH', 'Compressor High', [0x14d, 0x14f, 0x150, 0x151, 0x14e, 0, 0x9b, 0x9e], 0x9f)}
+# comp-ui 0.2 (CMP3): H is the band's own mix (param-rows 0.3's 0x152..0x154), in place of the stock MIX 0x9e
+COMP_PAGES = {40: ('COMP LOW', 'Compressor Low', [0x141, 0x143, 0x144, 0x145, 0x142, 0x146, 0x9b, 0x152], 0x9f),
+              41: ('COMP MID', 'Compressor Mid', [0x147, 0x149, 0x14a, 0x14b, 0x148, 0x14c, 0x9b, 0x153], 0x9f),
+              42: ('COMP HIGH', 'Compressor High', [0x14d, 0x14f, 0x150, 0x151, 0x14e, 0, 0x9b, 0x154], 0x9f)}
 
 
 def test_requires_versions_and_numbered_claims():
@@ -678,15 +682,15 @@ def test_core_page_records():
 
 
 def test_comp_ui_puts_three_band_pages_in_the_mixer_view():
-    """examples/comp-ui-dn2 with core 0.2, param-grow and param-rows 0.2: outside core's and
+    """examples/comp-ui-dn2 0.2 with core 0.2, param-grow and param-rows 0.3: outside core's and
     param-grow's sites only comp-ui's five change: the MIXER view's page count 5 -> 7 and its page
     list -> {40, 41, 42, 21, 22, 23, 24} in the mod's RAM image; DUAL mode's EXT MIX 2 insert index
     5 -> 7; MasterPageView's default draw case -> compui_draw; the page test in vslot47 ->
     compui_baseid (a jsr and a nop). Its three records go to core_pagerecs (ids 40..42), each in
     the stock layout with COW string titles (refcount -1), the band's rows on A..F (HIGH's F
-    empty) and the stock SCS, MIX and VOL rows on G, H and LEVEL. It claims page:40..42 and the
-    reply bytes it reads; without param-rows it is refused, and with param-rows 0.1 too (it requires
-    param-rows>=0.2: the ranges and texts of 0.2); a mod whose dsp-reply claim shares a byte with
+    empty), the stock SCS and VOL rows on G and LEVEL, the band's mix on H (0.2). It claims page:40..42
+    and the reply bytes it reads; without param-rows it is refused, and with param-rows 0.2 too (it
+    requires param-rows>=0.3: the band mixes); a mod whose dsp-reply claim shares a byte with
     comp-ui's is refused; with fx-page2 (which patches the accessor itself) core 0.2 is refused."""
     with tempfile.TemporaryDirectory() as tmp:
         core = built(os.path.join('mods', 'core-dn2'), tmp)
@@ -697,13 +701,13 @@ def test_comp_ui_puts_three_band_pages_in_the_mixer_view():
         outputs, man = patch.build(SYX, [core, grow, rows, ui], version='CMPX', log=lambda *a: None)
         expect(lambda: patch.build(SYX, [core, grow, ui], version='XXXX', log=lambda *a: None),
                'param-rows')
-        # param-rows as version 0.1 (the same mod, the version field rewritten): refused
+        # param-rows as version 0.2 (the same mod, the version field rewritten): refused
         with open(rows) as fh:
             old = json.load(fh)
-        old['version'] = '0.1'
-        rows01 = write_mod(tmp, old, 'param-rows-as-0.1.elemod')
-        expect(lambda: patch.build(SYX, [core, grow, rows01, ui], version='XXXX', log=lambda *a: None),
-               'requires param-rows 0.2 or later', 'param-rows 0.1 is given')
+        old['version'] = '0.2'
+        rows02 = write_mod(tmp, old, 'param-rows-as-0.2.elemod')
+        expect(lambda: patch.build(SYX, [core, grow, rows02, ui], version='XXXX', log=lambda *a: None),
+               'requires param-rows 0.3 or later', 'param-rows 0.2 is given')
         # another mod (fx-rename, with a resource name added) that claims reply bytes 0x04..0x13: refused;
         # one that claims 0x16..0x17 links
         ren = built(os.path.join('examples', 'fx-rename-dn2'), tmp)
@@ -767,7 +771,7 @@ def test_comp_ui_puts_three_band_pages_in_the_mixer_view():
         assert [rd(r + 8 + 4 * k) for k in range(8)] == knobs and rd(r + 0x28) == level, pid
     names = doc['resources']['names']
     assert {'page:40', 'page:41', 'page:42', 'dsp-reply:0x10-0x15'} <= set(names)
-    assert doc['requires'] == ['core', 'param-grow', 'param-rows>=0.2']
+    assert doc['requires'] == ['core', 'param-grow', 'param-rows>=0.3']
     assert not any(c['to'] == 'ev_tick' for c in doc['contribute'])     # nothing written at run time
     gaps = man['output']['main']['inplace_gaps']
     assert min(gaps.values()) > 0
@@ -775,12 +779,15 @@ def test_comp_ui_puts_three_band_pages_in_the_mixer_view():
 
 
 def test_comp_link_writes_the_frame_tail():
-    """examples/comp-link-dn2 0.1 with core 0.2, param-grow, param-rows 0.2 and comp-ui: outside core's,
-    param-grow's and comp-ui's sites only its one site changes, the frame handler's driver call at
-    0x40025e9e (jsr 0x400cf922 -> jsr compl_tail). compl_tail is 90 bytes in .run: it tests DSPI2 SR's
-    EOQF (bit 28) first, keeps its sequence in .bss (compl_seq, named twice) and ends in a jmp to the
-    driver, so the driver's rts returns into the handler. It claims the tail bytes 0xa80..0xabb and the
-    spare FX words k 87..96; a mod claiming one tail byte is refused, and without param-rows it is."""
+    """examples/comp-link-dn2 0.2 with core 0.2, param-grow, param-rows 0.3 and comp-ui 0.2: outside core's,
+    param-grow's and comp-ui's sites only its four change: the frame handler's driver call at 0x40025e9e
+    (jsr 0x400cf922 -> jsr compl_tail), and (0.2, the band values saved per kit) the FX record serializer
+    0x400dcf34 and loader 0x400dcef0 (jmp compl_ser / compl_load, then a nop) and FxSetup's vtable slot 17
+    0x401da4f0 (-> compl_update). compl_tail is 90 bytes in .run: it tests DSPI2 SR's EOQF (bit 28) first,
+    keeps its sequence in .bss (compl_seq, named twice) and ends in a jmp to the driver, so the driver's rts
+    returns into the handler. compl_ser and compl_load run the stock body (the displaced instructions, then a
+    jmp to its 9th byte). It claims the tail bytes 0xa80..0xabb, the spare FX words k 90..96 and the FX record's
+    +0x60..+0x97; a mod claiming one tail byte or one record byte is refused, and without param-rows it is."""
     with tempfile.TemporaryDirectory() as tmp:
         core = built(os.path.join('mods', 'core-dn2'), tmp)
         grow = built(os.path.join('examples', 'param-grow-dn2'), tmp)
@@ -796,6 +803,10 @@ def test_comp_link_writes_the_frame_tail():
         other = write_mod(tmp, d, 'fx-rename-claims-tail.elemod')
         expect(lambda: patch.build(SYX, [core, grow, rows, ui, link, other], version='XXXX', log=lambda *a: None),
                'spi-tail:0xa80-0xabb', 'spi-tail:0xab8-0xab9')
+        d['resources']['names'][-1] = 'fx-record:0x96-0x97'
+        other = write_mod(tmp, d, 'fx-rename-claims-record.elemod')
+        expect(lambda: patch.build(SYX, [core, grow, rows, ui, link, other], version='XXXX', log=lambda *a: None),
+               'fx-record:0x60-0x97', 'fx-record:0x96-0x97')
         with open(link) as fh:
             doc = json.load(fh)
         with open(ui) as fh:
@@ -817,10 +828,16 @@ def test_comp_link_writes_the_frame_tail():
         a = int(s['addr'], 16) - DEV.main_load
         allowed |= set(range(a, a + len(s['stock']) // 2))
     site = 0x40025e9e - DEV.main_load
-    assert [s['addr'] for s in doc['sites']] == ['0x40025e9e']
+    assert [s['addr'] for s in doc['sites']] == ['0x40025e9e', '0x400dcf34', '0x400dcef0', '0x401da4f0']
     assert img[site:site + 6].hex() == '4eb9400cf922'
     assert new[site:site + 6].hex() == '4eb9%08x' % smap['compl_tail']
     allowed |= set(range(site, site + 6))
+    for a, stockb, newb in ((0x400dcf34, '2f0b2f0a246f000c', '4ef9%08x4e71' % smap['compl_ser']),
+                            (0x400dcef0, '2f0b2f0a226f000c', '4ef9%08x4e71' % smap['compl_load']),
+                            (0x401da4f0, '4002ffca', '%08x' % smap['compl_update'])):
+        o, n = a - DEV.main_load, len(stockb) // 2
+        assert img[o:o + n].hex() == stockb and new[o:o + n].hex() == newb, hex(a)
+        allowed |= set(range(o, o + n))
     changed = {i for i in range(len(img)) if new[i] != img[i]}
     assert changed <= allowed, [hex(DEV.main_load + i) for i in sorted(changed - allowed)[:8]]
     t = smap['compl_tail']
@@ -829,8 +846,12 @@ def test_comp_link_writes_the_frame_tail():
     assert code[-6:].hex() == '4ef9400cf922'                   # jmp the driver
     assert code.count(smap['compl_seq'].to_bytes(4, 'big')) == 2
     assert lay['bss'][0] <= smap['compl_seq'] < lay['bss'][1]
-    assert set(doc['resources']['names']) == {'spi-tail:0xa80-0xabb', 'fx-k:87-96'}
-    assert doc['requires'] == ['core', 'param-grow', 'param-rows>=0.2']
+    # the entry hooks: the stock body's three displaced instructions, then a jmp to its 9th byte
+    for nm, disp, back in (('compl_ser', '2f0b2f0a246f000c', '4ef9400dcf3c'), ('compl_load', '2f0b2f0a226f000c', '4ef9400dcef8')):
+        c = run[smap[nm] - run_lo:smap[nm] - run_lo + 0x40]
+        assert (disp + back) in c.hex(), nm
+    assert set(doc['resources']['names']) == {'spi-tail:0xa80-0xabb', 'fx-k:90-96', 'fx-record:0x60-0x97'}
+    assert doc['requires'] == ['core', 'param-grow', 'param-rows>=0.3']
     assert not doc.get('contribute')
 
 # ---- protected ranges -------------------------------------------------------------------------

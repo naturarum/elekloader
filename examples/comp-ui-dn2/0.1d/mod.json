@@ -1,0 +1,31 @@
+{
+ "id": "comp-ui",
+ "version": "0.1d",
+ "title": "3-band compressor pages (CMP1) with a second bar (CMP2D diagnostic)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT, for dn2-cfw's CMP2D diagnostic build: comp-ui 0.1 with one change. Each band page also draws DSP reply half-word 11 (byte +0x16, the stock Compressor page's gain-reduction half-word) as a second bar at x 21-22, by the stock law, beside the band's own bar (half-words 8, 9, 10) at x 18-19. With CMP2D's DSP the four half-words carry a DSP load readout (dn2-cfw notes/T6.3-cmp2d.md). Reads reply bytes +0x10..+0x17. Otherwise 0.1: emulator-tested only. The MIXER view (FUNC+MOD) gets three pages for a 3-band master compressor in place of the Compressor page: Compressor Low, Mid and High (1/7 to 3/7), then INT MIX 1, INT MIX 2, FX MIX and EXT MIX as stock. Each band page has the band's threshold, attack, release, makeup, ratio and crossover (none on High) from param-rows, the stock sidechain source, dry/wet mix and pattern volume, a CMP/LOW|MID|HI box and the band's gain-reduction bar, read from DSP reply bytes +0x10..+0x15 (half-words 8, 9, 10), which a 3-band DSP writes. In DUAL mode EXT MIX 2 follows EXT MIX 1, and the sidechain source reaches In R on the band pages as on the stock page. The band knobs change the sound only with a DSP that reads them (dn2-cfw's CMP2 and later). Needs core 0.2 and param-rows 0.2. For dn2-cfw's CMP1 build.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": ["compui.c", "baseid.s"],
+ "sites": [
+  {"addr": "0x4006169c", "stock": "7205", "op": "bytes", "new": "7207", "kind": "code",
+   "note": "MainScreenView's constructor: the MIXER view's page count, 5 -> 7"},
+  {"addr": "0x400616aa", "stock": "203c401e0434", "op": "keep2", "target": "compui_pages",
+   "note": "MainScreenView's constructor: move.l #0x401e0434,d0, the MIXER view's page ids {20..24} -> compui_pages"},
+  {"addr": "0x40070b84", "stock": "43e90014", "op": "bytes", "new": "43e9001c", "kind": "code",
+   "note": "FUN_40070ae0: DUAL on inserts EXT MIX 2 (25) at index 5 -> 7, after EXT MIX 1"},
+  {"addr": "0x4007093e", "stock": "4ef940065a0c", "op": "jmp", "target": "compui_draw",
+   "note": "MasterPageView::vslot04, default case (ids outside 20..26): the stock drawing, then the band box and GR bar"},
+  {"addr": "0x4006ffc8", "stock": "2068008824004e90", "op": "jsr", "target": "compui_baseid",
+   "note": "MasterPageView::vslot47: the page id it tests; 40..42 count as the Compressor page (0x14) for SCS's DUAL row"}
+ ],
+ "contribute": [
+  {"to": "core_pagerecs", "order": 50, "data": "0000002800000000", "relocs": [[4, "abs32", "sym:compui_rec", 0]]},
+  {"to": "core_pagerecs", "order": 50, "data": "0000002900000000", "relocs": [[4, "abs32", "sym:compui_rec", 44]]},
+  {"to": "core_pagerecs", "order": 50, "data": "0000002a00000000", "relocs": [[4, "abs32", "sym:compui_rec", 88]]}
+ ],
+ "resources": {"names": ["page:40", "page:41", "page:42", "dsp-reply:0x10-0x17"]},
+ "requires": ["core", "param-grow", "param-rows>=0.2"]
+}

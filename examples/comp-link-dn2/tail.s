@@ -1,6 +1,7 @@
 | SPDX-License-Identifier: GPL-2.0-or-later
-| comp-link-dn2 0.1 (Digitone II OS 1.12): the 3-band compressor's band knobs to
-| the DSP, in the tail of the SPI frame. ColdFire V4; assemble with -mcpu=54455.
+| comp-link-dn2 (Digitone II OS 1.12; 0.1, unchanged in 0.2): the 3-band
+| compressor's band knobs to the DSP, in the tail of the SPI frame. ColdFire V4;
+| assemble with -mcpu=54455. 0.2 adds the kit storage (store.s, store.c).
 |
 | The vector-191 frame handler FUN_40025e36 builds the frame to the DSP and, at
 | 0x40025e9e, calls the DSPI2 driver:
@@ -24,7 +25,8 @@
 | Tail layout (word i = frame byte 0xa80 + 2i):
 |   0      0xC3B1: magic, the low byte is the layout (1)
 |   1      sequence, +1 per tail written
-|   2..28  the smoothed FX row-16 words of k 70..96 (0x800068e4 + 0xcc2 + 2k),
+|   2..28  the smoothed FX row-16 words of k 70..96 (0x800068e4 + 0xcc2 + 2k;
+|          k 87..89 the band mixes of param-rows 0.3, k 90..96 spare),
 |          which the stock smoother FUN_400db28e glides as it glides the
 |          framed k 25..69 (value << 8)
 |   29     ~(sum of words 0..28), low 16 bits: an all-zero tail never passes

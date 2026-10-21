@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* comp-ui (Digitone II OS 1.12): the 3-band master compressor's pages in the MIXER view
- * (FUNC+MOD), for dn2-cfw's CMP1 build. EXPERIMENT: emulator-tested only (dn2-cfw
+ * (FUNC+MOD), for dn2-cfw's CMP1 and CMP3 builds. EXPERIMENT: emulator-tested only (dn2-cfw
  * (github.com/naturarum/dn2-cfw) notes/T6.4-compressor-map-and-plan.md sections 1.6 and 2.1,
- * stage CMP1 in section 5). Needs core-dn2 0.2 (page records), param-grow and param-rows 0.2 (the
- * band rows 0x141..0x151, their ranges and value texts; mod.json requires param-rows>=0.2, so the
- * patcher refuses param-rows 0.1).
+ * stage CMP1 in section 5; notes/T6.3-cmp3.md for 0.2). Needs core-dn2 0.2 (page records), param-grow
+ * and param-rows 0.3 (the band rows 0x141..0x154, their ranges and value texts; mod.json requires
+ * param-rows>=0.3, so the patcher refuses param-rows 0.1 and 0.2).
  *
  * The MIXER view's pages: stock {20 Compressor, 21 INT MIX 1, 22 INT MIX 2, 23 FX MIX,
  * 24 EXT MIX 1} (+ 25 EXT MIX 2 in DUAL mode, + 26 Outbox 8); here {40 LOW, 41 MID, 42 HIGH,
@@ -16,9 +16,11 @@
  *   MID  (id 41)     Compressor Mid (2/7)   CMP / MID  THR  ATK  REL  MUP  RAT  XOVR hi  SCS  MIX  VOL
  *   HIGH (id 42)     Compressor High (3/7)  CMP / HI   THR  ATK  REL  MUP  RAT  (empty)  SCS  MIX  VOL
  *
- * A..F are each band's own rows (param-rows); G, H and LEVEL are the stock rows 0x9b SCS (0x9c in
- * DUAL mode), 0x9e MIX and 0x9f VOL, the same value on all three pages. The FX Mixer page stays
- * stock (SCF, row 0x9d, is on no page: the owner dropped it).
+ * A..F are each band's own rows (param-rows); 0.2: H is the band's own dry/wet mix (param-rows 0.3's
+ * 0x152, 0x153, 0x154: Low, Mid, High Mix), in place of the stock MIX 0x9e that 0.1 shared, which
+ * is then on no page (still saved, still on MIDI CC 118 / NRPN 279). G and LEVEL are the stock rows
+ * 0x9b SCS (0x9c in DUAL mode) and 0x9f VOL, the same value on all three pages. The FX Mixer page
+ * stays stock (SCF, row 0x9d, is on no page: the owner dropped it).
  *
  * The sites (mod.json; each stock instruction is checked by the SDK):
  * - 0x4006169c `moveq #5,d1` -> `moveq #7,d1` and 0x400616aa `move.l #0x401e0434,d0` (keep2) ->
@@ -63,13 +65,15 @@ static struct srep l_low = SREP("Compressor Low"), l_mid = SREP("Compressor Mid"
                    l_high = SREP("Compressor High");
 
 #define SCS 0x9b
-#define MIX 0x9e
 #define VOL 0x9f
+#define MIX_L 0x152                 /* param-rows 0.3: Low, Mid, High Mix */
+#define MIX_M 0x153
+#define MIX_H 0x154
 struct pagerec compui_rec[3] __attribute__((aligned(4))) = {
     /*                    A THR  B ATK  C REL  D MUP  E RAT  F XOVR  G    H        LEVEL */
-    { s_low.s,  l_low.s,  { 0x141, 0x143, 0x144, 0x145, 0x142, 0x146, SCS, MIX }, VOL },
-    { s_mid.s,  l_mid.s,  { 0x147, 0x149, 0x14a, 0x14b, 0x148, 0x14c, SCS, MIX }, VOL },
-    { s_high.s, l_high.s, { 0x14d, 0x14f, 0x150, 0x151, 0x14e, 0,     SCS, MIX }, VOL },
+    { s_low.s,  l_low.s,  { 0x141, 0x143, 0x144, 0x145, 0x142, 0x146, SCS, MIX_L }, VOL },
+    { s_mid.s,  l_mid.s,  { 0x147, 0x149, 0x14a, 0x14b, 0x148, 0x14c, SCS, MIX_M }, VOL },
+    { s_high.s, l_high.s, { 0x14d, 0x14f, 0x150, 0x151, 0x14e, 0,     SCS, MIX_H }, VOL },
 };
 
 /* the MIXER view's pages, in order (MainScreenView's constructor copies 7 of them) */

@@ -10,13 +10,16 @@ unchanged so the builds stay byte-for-byte reproducible. This file holds the cur
 | `midi-hooktest-dn2` | **ran on a unit** (DH01, 2026-10-13); its MIDI-out effect not yet watched there |
 | `fx-rename-dn2` | **ran on a unit** (FTN1, 2026-10-13): every name displays correctly |
 | `param-grow-dn2` | **ran on a unit** (GT00, 2026-10-13): normal use, +Drive save and load, cold start |
-| `param-rows-dn2` | 0.1 **ran on a unit** (GT01, 2026-10-13). 0.2 (the band rows' names, ranges, defaults and texts): **ran on a unit** (CMP1, 2026-10-14) |
-| `comp-ui-dn2` | **ran on a unit** (CMP1, 2026-10-14): the three band pages in the MIXER view; needs core 0.2 |
-| `comp-link-dn2` | emulator only so far (CMP2, 2026-10-17): the band knobs k 70..86 to the DSP in the SPI frame tail (one site, 0x40025e9e); needs param-rows 0.2 |
+| `param-rows-dn2` | 0.1 **ran on a unit** (GT01, 2026-10-13). 0.2 (the band rows' names, ranges, defaults and texts): **ran on a unit** (CMP1, 2026-10-14). 0.3 (three band mix rows, k 87..89): **ran on a unit** (dn2-cfw CMP3, 2026-10-21) |
+| `comp-ui-dn2` | 0.1 **ran on a unit** (CMP1, 2026-10-14): the three band pages in the MIXER view; needs core 0.2. 0.2 (each band page's H is the band's own mix; needs param-rows 0.3): **ran on a unit** (dn2-cfw CMP3, 2026-10-21). The bar's draw is unchanged (h = q / 655 px); CMP3's DSP sends 1310 x the band's held gain reduction in dB in half-words 8..10 (no longer Q15 of 1 - g), so the bar is 2 px per dB, 12 dB at the bottom of the CMP box |
+| `comp-link-dn2` | 0.1 **ran on a unit** (CMP2, 2026-10-18): the band knobs k 70..86 reach the DSP in the SPI frame tail (one site, 0x40025e9e); needs param-rows 0.2. 0.2 (the band values and mixes saved per kit: the FX record serializer and loader and FxSetup's slot 17 hooked; old kits seeded from their stock compressor values; needs param-rows 0.3): **ran on a unit** (dn2-cfw CMP3, 2026-10-21: band settings come back after kit switches and reloads; storage review notes/T6.3-cmp3-review.md lists two minor fixes for 0.3) |
 | `fx-echo-dn2` | emulator only so far (SE01, brick checker 12/12, 2026-10-13); AGE's label does not show its value while turning (known, minor) |
 | `param-test-dn2` | emulator only. **Never flash it** |
 | `fx-page2-dn2` | emulator only. It patches the page-record routine 0x400c25d8 itself, so it links only with core 0.1 (0.2 owns that routine). **Never flash it**: it borrows rows that carry MIDI CCs, and its SHPE row copies a lockable display entry, so a p-lock on it would be saved as a lock on the track's sound slot 70 (dn2-cfw `notes/T6.1-table-growth-study.md`) |
 | `flanger-ui-dn2` | emulator only, superseded by `fx-rename-dn2` |
+
+dn2-cfw's CMP1 and CMP2 build every mod from this fork's commit e10bb05 (comp-ui 0.1, param-rows 0.2, comp-link 0.1),
+so they still rebuild byte for byte after CMP3 moved those three on in place.
 
 dn2-cfw's builds made before core 0.2 and param-rows 0.2 (DC01, DH01, FP01, FTN1, GT00, GT01, SE01) build those
 two mods from this fork's commit 59cd41f (their 0.1 sources), so they still rebuild byte for byte: built from the
