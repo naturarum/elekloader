@@ -33,9 +33,16 @@
  *   k 90..96 load as 0.
  * Single edits (compl_update): the stock routine first; it writes a single FX change into the
  * record word of the change's id, and every k from 70 has id 0 (the map 0x401fd160 ends at k 69),
- * so a band knob turn writes the band value over the id-0 word. That word is put back when every k
- * the change names is 70 or more (a k below 70 is the stock behaviour, untouched), then the 27 words
- * and the check word are written from the live setup.
+ * so a band knob turn writes the band value over the id-0 word. That word is put back unless the
+ * change names a k in 0..24 (the k that fold into id 0 on stock; k 25..69 have their own ids and
+ * never write it), then the 27 words and the check word are written from the live setup.
+ * 0.3 (dn2-cfw SC01, the CMP3 storage review's two fixes): (1) the live setup is read before the
+ * stock routine and the 27 words are written only if the setup still points at the same live words
+ * and the same mirror record afterwards, so a kit change on another task in that window (+0x10 and
+ * +0x20 are retargeted by two separate stores) cannot write one kit's words into another kit's
+ * record: the retarget's own vslot04(self, 0) then writes the right pair; (2) the id-0 word is put
+ * back whenever no k in 0..24 is named (0.2: only when every k was 70 or more, so a change naming
+ * k 25..69 and k >= 70 together left a band value there; harmless, but now exact).
  */
 typedef unsigned short u16;
 
@@ -109,37 +116,48 @@ void compl_decode(u16 *live, const unsigned char *rec)
 #define TI_MANY  ((const void *)0x401da16c)
 #define TI_ONE   ((const void *)0x401da160)
 
-/* 1 when every k the change names is K0 or more (the casts as updateMirror makes them) */
-static int only_ours(void *info)
+#define K_ID0_LAST 24              /* k 0..24 fold into id 0 on stock (FUN_400dce5e) */
+
+/* 1 when the change is one the stock routine writes at once (a single k, or a vector of k: the casts
+   as updateMirror makes them) and names no k in 0..24, so its write to the id-0 word (if any) came
+   from a k of ours; 0 otherwise (a k in 0..24 named, or a change type the stock routine leaves to
+   its mirror job) */
+static int restore_id0(void *info)
 {
     int *p = DYNCAST(info, TI_SRC, TI_MANY, 0);
     if (p) {
         const int *k = (const int *)p[1], *e = (const int *)p[2];
-        if (k == e)
-            return 0;
         for (; k != e; k++)
-            if (*k < K0)
+            if ((unsigned int)*k <= K_ID0_LAST)
                 return 0;
         return 1;
     }
     p = DYNCAST(info, TI_SRC, TI_ONE, 0);
-    return p && p[1] >= K0;
+    return p && (unsigned int)p[1] > K_ID0_LAST;
 }
+
+/* FxSetup's live words (vtable slot 10, +0x28) and its mirror record (+0x20) */
+#define LIVE(self) (((const u16 *(*)(void *))((void **)*(self))[0x28 / 4])(self))
+#define MIRROR(self) (*(unsigned char **)((unsigned char *)(self) + 0x20))
 
 /* FxSetup's vtable slot 17 (0x401da4f0): (self, the record in the working image, the change or 0) */
 void compl_update(void **self, unsigned char *stored, void *info)
 {
-    const u16 *live;
+    const u16 *live0, *live;
     u16 w0 = 0;
     if (stored)
         w0 = REC(stored, 4);
+    live0 = LIVE(self);
     UPDATE(self, stored, info);
     if (!stored)
         return;
-    live = ((const u16 *(*)(void *))((void **)*self)[0x28 / 4])(self);
-    if (!live)
-        return;
-    if (info && only_ours(info))
+    if (info && restore_id0(info))
         REC(stored, 4) = w0;
+    /* the pair the stock routine wrote into: still this setup's live words and mirror record? */
+    if (MIRROR(self) != stored)
+        return;
+    live = LIVE(self);
+    if (!live || live != live0)
+        return;
     compl_encode(stored, live);
 }

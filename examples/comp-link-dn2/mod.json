@@ -1,11 +1,11 @@
 {
  "id": "comp-link",
- "version": "0.2",
- "title": "3-band compressor knobs to the DSP, saved per kit (CMP2, CMP3)",
+ "version": "0.3",
+ "title": "3-band compressor knobs to the DSP, saved per kit (CMP2, CMP3, SC01)",
  "category": "Examples",
  "license": "GPL-2.0-or-later",
  "author": "naturarum",
- "description": "EXPERIMENT: emulator-tested only (0.1 ran on a unit in CMP2). Sends the 3-band compressor's band knobs (FX k 70..89: the band rows and, from param-rows 0.3, the three band mixes, with the spare k 90..96) to the DSP in the tail of every SPI frame: 30 words in frame bytes 0xa80..0xabb, which the stock driver sends but never fills (a magic word, a sequence number, the 27 smoothed values, a check word). It writes them only between transfers, so a frame on the wire is never changed. Nothing changes the sound unless the DSP reads the tail (dn2-cfw's CMP2 and later); with a stock DSP the tail is ignored. 0.2 saves the 27 values with the kit, in 28 words of the kit's FX record that the stock OS never writes or reads (a check word marks them): the FX record's serializer and loader and FxSetup's mirror update are hooked. A kit saved before (or by a stock OS) opens seeded from its own stock compressor values: one full-band compressor (the Low/Mid crossover at 30 Hz, the Mid/High one at 16 kHz), each band with the kit's threshold, attack, release, makeup, ratio and mix. A stock OS loads these kits as it loads any other and keeps the words on an in-place re-save. Needs core, param-grow and param-rows 0.3. For dn2-cfw's CMP3 build.",
+ "description": "EXPERIMENT: 0.3 emulator-tested only (0.1 ran on a unit in CMP2, 0.2 in CMP3). Sends the 3-band compressor's band knobs (FX k 70..89: the band rows and, from param-rows 0.3, the three band mixes, with the spare k 90..96) to the DSP in the tail of every SPI frame: 30 words in frame bytes 0xa80..0xabb, which the stock driver sends but never fills (a magic word, a sequence number, the 27 smoothed values, a check word). It writes them only between transfers, so a frame on the wire is never changed. Nothing changes the sound unless the DSP reads the tail (dn2-cfw's CMP2 and later); with a stock DSP the tail is ignored. 0.2 saves the 27 values with the kit, in 28 words of the kit's FX record that the stock OS never writes or reads (a check word marks them): the FX record's serializer and loader and FxSetup's mirror update are hooked. A kit saved before (or by a stock OS) opens seeded from its own stock compressor values: one full-band compressor (the Low/Mid crossover at 30 Hz, the Mid/High one at 16 kHz), each band with the kit's threshold, attack, release, makeup, ratio and mix. A stock OS loads these kits as it loads any other and keeps the words on an in-place re-save. Needs core, param-grow and param-rows 0.3. 0.3 (dn2-cfw SC01): the CMP3 storage review's two fixes in the mirror update: the live words are read before the stock routine, and the words are written only if the setup still points at the same live words and mirror record afterwards (a kit change on another task in that window); the id-0 word is put back whenever no k in 0..24 is named. For dn2-cfw's SC01 build.",
  "device": "digitone-mk2",
  "os": "1.12",
  "sources": ["tail.s", "store.s", "store.c"],
@@ -17,7 +17,7 @@
   {"addr": "0x400dcef0", "stock": "2f0b2f0a226f000c", "op": "jmp", "target": "compl_load",
    "note": "FUN_400dcef0, the FX record loader (live, stored): the stock body, then compl_decode on success (version 0)"},
   {"addr": "0x401da4f0", "stock": "4002ffca", "op": "ptr", "target": "compl_update",
-   "note": "FxSetup's vtable slot 17 (FxSetup::updateMirror 0x4002ffca): the stock routine, then the id-0 word put back and the 27 words written"}
+   "note": "FxSetup's vtable slot 17 (FxSetup::updateMirror 0x4002ffca): the live words read, the stock routine, the id-0 word put back unless a k in 0..24 is named, then the 27 words written if the setup still points at the same live words and mirror record"}
  ],
  "resources": {"names": ["spi-tail:0xa80-0xabb", "fx-k:90-96", "fx-record:0x60-0x97"]},
  "requires": ["core", "param-grow", "param-rows>=0.3"]

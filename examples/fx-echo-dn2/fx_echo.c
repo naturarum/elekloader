@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* fx-echo (Digitone II OS 1.12): the delay page as a Space Echo, on one page, for dn2-cfw's SE01
- * build, whose DSP runs a Space Echo (RE-201 style tape echo) in the delay slot and the flanger in
+ * and SC01 builds (0.2, SC01: AGE shows its value while it turns), whose DSP runs a Space Echo (RE-201 style tape echo) in the delay slot and the flanger in
  * the chorus slot. It supersedes fx-rename (FTN1's names): the flanger names are the same, and
  * every name fx-rename gave the tape delay now says Echo. EXPERIMENT: emulator-tested only (dn2-cfw
  * (github.com/naturarum/dn2-cfw), task T5.3; the effect: notes/T5.2-space-echo.md; the G slot:
@@ -61,8 +61,13 @@
  *     1. MODE's glyph: row 0x72's display entry +0x14..+0x23 (the std::function that draws the
  *        glyph: functor, manager, invoker) <- FM ALGO's (row 0xc8: 8 numbered boxes, frame = value);
  *     2. AGE's encoder and glyph: row 0x7a's +0x04..+0x23 (steps per detent, the acceleration
- *        curve, the glyph) <- Band Center's (row 0x75: the plain 0..127 knob). Flags (+0x00) and
- *        the two std::functions at +0x24 and +0x34 stay row 0x7a's own;
+ *        curve, the glyph) <- Band Center's (row 0x75: the plain 0..127 knob). The two
+ *        std::functions at +0x24 and +0x34 stay row 0x7a's own, and so do its flags (+0x00) but
+ *        bit 2 (0.2): 0xc -> 0x8, as every other delay row. Bit 2 makes the knob draw
+ *        (ParameterPageView::vslot45 0x4006448a, MultiSourcePageView::vslot45, MidiParameterPageView::
+ *        vslot04, the only readers, through 0x400372fe) keep the label while the knob turns, which
+ *        suits the stock two-state routing row but hid AGE's value (SE01's known issue); bit 3 (never
+ *        p-lockable, ParameterPageView::vslot35 0x40064ccc reads bits 0 and 3) is kept;
  *     3. page 17's knob G (0x42433f0c, 0 in stock) <- 0x7a, last, so the page never shows the row
  *        before its entry is ready.
  *   If anything is not as stock 1.12 builds it, nothing is written and fxe_state is -1 (the page
@@ -207,6 +212,7 @@ void fxe_tick(void *ctrl)
     COPY(age, knob, 3); COPY(age, knob, 4);     /* (+0x04..+0x23) */
     COPY(age, knob, 5); COPY(age, knob, 6);
     COPY(age, knob, 7); COPY(age, knob, 8);
+    age[0] = age[0] & ~4u;                      /* 0.2: AGE's value text while turning (bit 3 kept) */
     p->rows[6] = 0x7a;                          /* AGE on knob G */
     fxe_state = 1;
 }

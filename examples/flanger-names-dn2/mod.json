@@ -1,0 +1,97 @@
+{
+ "id": "flanger-names",
+ "version": "0.1",
+ "title": "Flanger names (CMP4)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "For dn2-cfw's CMP4 build, whose DSP runs a flanger in the chorus slot and the stock delay in the delay slot: renames the chorus page and every chorus send to Flanger/FLG; every delay name stays stock. fx-rename-dn2's 13 flanger sites with the same strings (they ran on a unit in FTN1 to CMP3), without its tape sites. Labels only: no new rows, knobs or glyphs, and every knob keeps its MIDI CC, storage and DSP frame word. On a stock DSP the chorus would be named Flanger.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "flanger_names.c"
+ ],
+ "sites": [
+  {
+   "addr": "0x400ca018",
+   "stock": "487940210a96",
+   "op": "keep2",
+   "target": "fln_flanger"
+  },
+  {
+   "addr": "0x400c9fba",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "fln_flg"
+  },
+  {
+   "addr": "0x4006f4f8",
+   "stock": "48794022153a",
+   "op": "keep2",
+   "target": "fln_flg"
+  },
+  {
+   "addr": "0x401f9380",
+   "stock": "40210bcf",
+   "op": "ptr",
+   "target": "fln_flg_send"
+  },
+  {
+   "addr": "0x401f9388",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fln_flg"
+  },
+  {
+   "addr": "0x401f9dd0",
+   "stock": "4021c061",
+   "op": "ptr",
+   "target": "fln_flg_mix"
+  },
+  {
+   "addr": "0x401f9dd8",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fln_flg"
+  },
+  {
+   "addr": "0x401fa460",
+   "stock": "40210bcc",
+   "op": "ptr",
+   "target": "fln_flg_in"
+  },
+  {
+   "addr": "0x401fa468",
+   "stock": "40210c34",
+   "op": "ptr",
+   "target": "fln_flg"
+  },
+  {
+   "addr": "0x401fa49c",
+   "stock": "40210c22",
+   "op": "ptr",
+   "target": "fln_flg_in_l"
+  },
+  {
+   "addr": "0x401fa4a4",
+   "stock": "40210c33",
+   "op": "ptr",
+   "target": "fln_flg_l"
+  },
+  {
+   "addr": "0x401fa4d8",
+   "stock": "40210c38",
+   "op": "ptr",
+   "target": "fln_flg_in_r"
+  },
+  {
+   "addr": "0x401fa4e0",
+   "stock": "40210c49",
+   "op": "ptr",
+   "target": "fln_flg_r"
+  }
+ ],
+ "requires": [
+  "core"
+ ]
+}

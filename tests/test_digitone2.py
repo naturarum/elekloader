@@ -779,7 +779,7 @@ def test_comp_ui_puts_three_band_pages_in_the_mixer_view():
 
 
 def test_comp_link_writes_the_frame_tail():
-    """examples/comp-link-dn2 0.2 with core 0.2, param-grow, param-rows 0.3 and comp-ui 0.2: outside core's,
+    """examples/comp-link-dn2 0.3 (0.2's sites; dn2-cfw SC01) with core 0.2, param-grow, param-rows 0.3 and comp-ui 0.2: outside core's,
     param-grow's and comp-ui's sites only its four change: the frame handler's driver call at 0x40025e9e
     (jsr 0x400cf922 -> jsr compl_tail), and (0.2, the band values saved per kit) the FX record serializer
     0x400dcf34 and loader 0x400dcef0 (jmp compl_ser / compl_load, then a nop) and FxSetup's vtable slot 17
