@@ -1,11 +1,11 @@
 {
  "id": "comp-ui",
- "version": "0.2",
- "title": "3-band compressor pages (CMP1, CMP3)",
+ "version": "0.3",
+ "title": "3-band compressor pages (CMP1, CMP3, FL02)",
  "category": "Examples",
  "license": "GPL-2.0-or-later",
  "author": "naturarum",
- "description": "EXPERIMENT: emulator-tested only (0.1 ran on a unit in CMP1 and CMP2). The MIXER view (FUNC+MOD) gets three pages for a 3-band master compressor in place of the Compressor page: Compressor Low, Mid and High (1/7 to 3/7), then INT MIX 1, INT MIX 2, FX MIX and EXT MIX as stock. Each band page has the band's threshold, attack, release, makeup, ratio and crossover (none on High) from param-rows, the stock sidechain source, (0.2) the band's own dry/wet mix (param-rows 0.3) and the stock pattern volume, a CMP/LOW|MID|HI box and the band's gain-reduction bar, read from DSP reply bytes +0x10..+0x15 (half-words 8, 9, 10), which a 3-band DSP writes. In DUAL mode EXT MIX 2 follows EXT MIX 1, and the sidechain source reaches In R on the band pages as on the stock page. The band knobs change the sound only with a DSP that reads them (dn2-cfw's CMP2 and later). Needs core 0.2 and param-rows 0.3. For dn2-cfw's CMP1 (0.1) and CMP3 (0.2) builds.",
+ "description": "EXPERIMENT: emulator-tested only (0.1 ran on a unit in CMP1 and CMP2, 0.2 in CMP3 to FL01). The MIXER view (FUNC+MOD) gets three pages for a 3-band master compressor in place of the Compressor page: Compressor Low, Mid and High (1/7 to 3/7), then INT MIX 1, INT MIX 2, FX MIX and EXT MIX as stock. Each band page has the band's threshold, attack, release, makeup, ratio and crossover (none on High) from param-rows, the stock sidechain source, (0.2) the band's own dry/wet mix (param-rows 0.3) and the stock pattern volume, a CMP/LOW|MID|HI box and the band's gain-reduction bar, read from DSP reply bytes +0x10..+0x15 (half-words 8, 9, 10), which a 3-band DSP writes. In DUAL mode EXT MIX 2 follows EXT MIX 1, and the sidechain source reaches In R on the band pages as on the stock page. 0.3: the ratio knobs draw the stock compressor's ratio glyph for all 9 values (1.50 .. 20.00 the stock frame for the same ratio, 1.00 a ninth frame in the stock style). The band knobs change the sound only with a DSP that reads them (dn2-cfw's CMP2 and later). Needs core 0.2 and param-rows 0.4. For dn2-cfw's CMP1 (0.1), CMP3 (0.2) and FL02 (0.3) builds.",
  "device": "digitone-mk2",
  "os": "1.12",
  "sources": ["compui.c", "baseid.s"],
@@ -27,5 +27,5 @@
   {"to": "core_pagerecs", "order": 50, "data": "0000002a00000000", "relocs": [[4, "abs32", "sym:compui_rec", 88]]}
  ],
  "resources": {"names": ["page:40", "page:41", "page:42", "dsp-reply:0x10-0x15"]},
- "requires": ["core", "param-grow", "param-rows>=0.3"]
+ "requires": ["core", "param-grow", "param-rows>=0.4"]
 }

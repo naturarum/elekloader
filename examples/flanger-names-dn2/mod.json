@@ -1,11 +1,11 @@
 {
  "id": "flanger-names",
- "version": "0.1",
- "title": "Flanger names (CMP4)",
+ "version": "0.2",
+ "title": "Flanger names (FL01)",
  "category": "Examples",
  "license": "GPL-2.0-or-later",
  "author": "naturarum",
- "description": "For dn2-cfw's CMP4 build, whose DSP runs a flanger in the chorus slot and the stock delay in the delay slot: renames the chorus page and every chorus send to Flanger/FLG; every delay name stays stock. fx-rename-dn2's 13 flanger sites with the same strings (they ran on a unit in FTN1 to CMP3), without its tape sites. Labels only: no new rows, knobs or glyphs, and every knob keeps its MIDI CC, storage and DSP frame word. On a stock DSP the chorus would be named Flanger.",
+ "description": "For dn2-cfw's FL01 build, whose DSP runs a flanger in the chorus slot (its knob C is TIME, the centre delay, from a phaser-like 0.05 ms through the flanger to a 25.7 ms chorus) and the stock delay in the delay slot: renames the chorus page and every chorus send to Flanger/FLG, and the chorus page's knob C from High-pass/HPF to Time/TIME, with a new-kit default of 32 (the flanger of earlier builds); every delay name stays stock. 0.1 (CMP4) is the same without the knob C sites. Labels and one default only: no new rows, knobs or glyphs, and every knob keeps its MIDI CC, storage and DSP frame word. On a stock DSP the chorus would be named Flanger and its HPF knob Time.",
  "device": "digitone-mk2",
  "os": "1.12",
  "sources": [
@@ -89,6 +89,24 @@
    "stock": "40210c49",
    "op": "ptr",
    "target": "fln_flg_r"
+  },
+  {
+   "addr": "0x401f9cc8",
+   "stock": "00000000",
+   "op": "bytes",
+   "new": "00002000"
+  },
+  {
+   "addr": "0x401f9ce0",
+   "stock": "40210aa2",
+   "op": "ptr",
+   "target": "fln_time_name"
+  },
+  {
+   "addr": "0x401f9ce8",
+   "stock": "40210af8",
+   "op": "ptr",
+   "target": "fln_time"
   }
  ],
  "requires": [

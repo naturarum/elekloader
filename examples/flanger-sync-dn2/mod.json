@@ -1,0 +1,31 @@
+{
+ "id": "flanger-sync",
+ "version": "0.1",
+ "title": "Flanger speed in sync with the tempo (FL02)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only. For dn2-cfw's FL02 build, whose DSP runs a flanger in the chorus slot: FUNC + turn on the chorus page's SPD (knob B) steps through 12 speeds in sync with the project tempo, one LFO cycle per 16, 8, 4, 2 or 1 bars, 1/2, 1/4., 1/4, 1/8., 1/8, 1/16 or 1/32 note, named as the delay names its note values; a turn without FUNC goes back to the free speeds. As the delay's FUNC + turn works: the row's display entry gets its own FUNC + turn function, and its value text names the synced values. A synced speed is kept in the knob's own value (a low byte, as the delay's fine values), so it is saved with the kit and nothing else is stored; old kits keep their free speed. On a DSP without sync a synced value plays about that speed at 120 BPM.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "sync.c"
+ ],
+ "sites": [
+  {
+   "addr": "0x401f9cb0",
+   "stock": "400e3030",
+   "op": "ptr",
+   "target": "fls_fmt"
+  },
+  {
+   "addr": "0x400c5c96",
+   "stock": "487942432ee8",
+   "op": "keep2",
+   "target": "fls_tpl"
+  }
+ ],
+ "requires": [
+  "core"
+ ]
+}

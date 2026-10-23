@@ -1,0 +1,19 @@
+{
+ "id": "os-version",
+ "version": "0.1",
+ "title": "Report OS 1.12 to the computer (Overbridge)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only. A custom build names itself in the container's version field, which the bootstrap shows on the power-on screen and in TEST MODE and the main OS reports to the computer; Overbridge then refuses the unit as not running a compatible OS version. This mod makes the two sites that send the version out (the USB vendor request's version reply, built at init, and the reply to MidiRpcSoftwareVersionRequest) report a copy of the header with 1.12 in the version field. The power-on screen and TEST MODE still show the build's name; the build id and everything else are stock. For dn2-cfw.",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": ["osver.c"],
+ "sites": [
+  {"addr": "0x400cf1c8", "stock": "4eb940134850", "op": "jsr", "target": "osv_hdr",
+   "note": "the init task FUN_400cedfc: jsr 0x40134850 (the header cache getter), then +8..+0x17 copied by FUN_40005906 to 0x40287ad5, the reply of USB vendor request 0xC0/0x02"},
+  {"addr": "0x40126270", "stock": "4eb940134850", "op": "jsr", "target": "osv_hdr",
+   "note": "FUN_40125f9e, MidiRpcSoftwareVersionRequest: jsr 0x40134850, then 4 bytes from +8 and 12 from +0x0C into the reply"}
+ ],
+ "requires": ["core"]
+}

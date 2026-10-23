@@ -2,7 +2,8 @@
 /* param-rows (Digitone II OS 1.12): the 20 parameter rows of the 3-band master compressor,
  * through param-grow's table param_rows. EXPERIMENT: emulator-tested only (dn2-cfw
  * (github.com/naturarum/dn2-cfw) notes/T6.5-table-growth.md for 0.1, GT01;
- * notes/T6.4-compressor-map-and-plan.md section 2.2 for 0.2, CMP1; notes/T6.3-cmp3.md for 0.3, CMP3).
+ * notes/T6.4-compressor-map-and-plan.md section 2.2 for 0.2, CMP1; notes/T6.3-cmp3.md for 0.3, CMP3;
+ * notes/FL02.md for 0.4, FL02).
  *
  * The design (the owner's): three pages, one per band (LOW, MID, HIGH), each with threshold,
  * ratio, attack, release and makeup; the two crossovers on the LOW and MID pages; the stock
@@ -37,6 +38,16 @@
  * comp-ui-dn2 0.2 puts each on its band page's H, in place of the stock MIX; comp-link-dn2 sends k 70..96
  * to the DSP (k 87..89 are its tail words 19..21) and, from 0.2, keeps them in the kit.
  *
+ * 0.4 (FL02) changes only which stock row's display entry each band knob borrows (the field `look`), so
+ * that every band knob draws the stock compressor's glyph for its kind, as the owner asked: threshold the
+ * stock THR curve (row 0x96, 15 frames), attack and release the stock slider (0x97, 0x98, 13 frames),
+ * ratio the stock RAT steps (0x9a, 8 frames; comp-ui-dn2 0.3 draws them for the 9 values 0..8), makeup
+ * the stock MUP dial (0x99, 96 frames, as before) and the mixes the stock DRY/CMP strip (0x9e, as 0.3).
+ * The crossovers keep the default dial (0x99): no stock glyph shows a split frequency. A borrowed entry
+ * also brings that row's display flags (RAT: 5, the label stays while it turns), encoder feel and FUNC +
+ * turn function (THR, ATK, REL, RAT: to the end of the range, as on the stock page; MUP: to the default).
+ * Names, ranges, defaults, formatters, k and the stored values are 0.3's: no kit changes.
+ *
  * Every row stays as the study's rules want an FX row (notes/T6.1-table-growth-study.md 3.4):
  * - group 0x14 (the compressor's) in the FX set, each with its own k from 70..89, which no stock
  *   row uses; the stock storage keeps only k 25..69, so a stock kit save does not keep these values
@@ -45,8 +56,9 @@
  *   an FX row would be stored as a lock on the track's sound slot with the same k);
  * - no randomiser (param-grow clears it), no MIDI CC, no NRPN, no modulation flags;
  * - Overbridge ids 0x400 + n, outside stock's 0..387;
- * - every knob but the three mixes borrows Makeup Gain's display entry (0x99): the stock default
- *   dial, the owner's placeholder glyph; the mixes borrow the stock MIX's (0x9e);
+ * - each knob borrows the display entry of its stock compressor row (0.4; THR 0x96, ATK 0x97, REL 0x98,
+ *   MUP 0x99, RAT 0x9a, MIX 0x9e); the crossovers borrow Makeup Gain's (0x99), the stock default dial
+ *   (0.1 to 0.3: every knob but the mixes did, the owner's placeholder glyph);
  * - on no page by param-grow's slot mechanism (comp-ui's page records place them).
  * The defaults matter only where the OS sets a kit's FX words to the row defaults (a new kit,
  * FUN_400e7140); a loaded kit keeps whatever the live words held.
@@ -55,7 +67,11 @@
 #include "xover_table.h"
 
 #define K0 70                    /* the first FX slot: 70..89 */
-#define LOOK 0x99                /* Makeup Gain's display entry: the stock default dial */
+#define LOOK 0x99                /* Makeup Gain's display entry: the stock default dial (MUP, XOVR) */
+#define LOOK_THR 0x96            /* 0.4: the stock compressor's own rows, for their glyphs */
+#define LOOK_ATK 0x97
+#define LOOK_REL 0x98
+#define LOOK_RAT 0x9a
 
 /* Stock 1.12 addresses (checked by dn2-cfw's scripts/t63b_build.py) */
 #define FMT_DB          ((const void *)0x400e3b2e)   /* the makeup text: '%sdB' from 0x401fde4c */
@@ -101,10 +117,10 @@ int param_rows_fmt_xhi(int value, char *out)
 #define LOOK_MIX 0x9e            /* the stock MIX row's display entry */
 
 #define BAND(n, b) \
-    ROW((n) + 0, b " Threshold", "THR", 127, 32, FMT_NUMBER), \
-    ROW((n) + 1, b " Ratio", "RAT", 8, 4, param_rows_fmt_ratio), \
-    ROW((n) + 2, b " Attack", "ATK", 127, 24, FMT_NUMBER), \
-    ROW((n) + 3, b " Release", "REL", 127, 32, FMT_NUMBER), \
+    ROWL((n) + 0, b " Threshold", "THR", 127, 32, FMT_NUMBER, LOOK_THR), \
+    ROWL((n) + 1, b " Ratio", "RAT", 8, 4, param_rows_fmt_ratio, LOOK_RAT), \
+    ROWL((n) + 2, b " Attack", "ATK", 127, 24, FMT_NUMBER, LOOK_ATK), \
+    ROWL((n) + 3, b " Release", "REL", 127, 32, FMT_NUMBER, LOOK_REL), \
     ROW((n) + 4, b " Makeup", "MUP", 127, 64, FMT_DB)
 
 const struct param_row param_rows_comp[] __attribute__((aligned(4))) = {
