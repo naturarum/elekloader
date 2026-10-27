@@ -11,6 +11,9 @@
  *   WAVE 9..15  PMAJ PMIN HIRA WTON DORI LYDI OCTA: the DV-F loop; when DEST is the machine's tuning (WaveTone TUN1,
  *               TUN2, MAST; FM Drum and Swarmer TUNE; FM Tone PITCH) the result is rounded to the nearest note of
  *               the scale, counted in semitones from TUNE 0; on any other DEST these are DV-F
+ *   WAVE 16     KEY (0.2): the same, in the track's own key: the scale and root of KEYBOARD SETUP (the pattern
+ *               playing; per track or per pattern, as its CONFIG says), the pitch rounded being the voice's note plus
+ *               the tuning, so the note heard is in the scale; Chromatic gives semitones
  *   on these waves MODE is the loop's length: FREE 2, TRIG 4, HOLD 8, ONE 16, HALF 32 values (MODE's words stay
  *   the stock ones; its trig modes do not apply), and SPH is the mutation: at each step the visited value is
  *     SPH 0..63    replaced by a new random value with probability ((64 - SPH) / 64)^2 (0: always)
@@ -29,9 +32,10 @@
  *   B  0x401376bc, MIDI tracks, called per track by the MIDI task: the same logic, its own state at 0x44640498
  *      (+0x26 is B's hold flag), a cycle of 21,600,000.
  * Both clamp WAVE to 0..6 and take the waveform from the table 0x4020b7f8 (TRI SINE SQR SAW EXPO RAMP; RAND
- * has its own code): the clamp goes to 15, the table becomes ours (the stock six, then dv_wave_*_s for 7..15),
+ * has its own code): the clamp goes to 16 (0.1: 15), the table becomes ours (the stock six, then dv_wave_*_s for
+ * 7..16),
  * and MODE reads as FREE on the added waves (dv.s). The value text of rows 0x4f, 0x59, 0x63 (LFO1-3 WAVE) is
- * dv_fmt, their maximum 15. Everything else (the page's glyphs clamp to RAND's, SPH and SLEW: SLEW only at
+ * dv_fmt, their maximum 16 (0.1: 15). Everything else (the page's glyphs clamp to RAND's, SPH and SLEW: SLEW only at
  * WAVE 6) is stock.
  *
  * State: the loop's values belong to the track (16 tracks x 3 LFOs, so every voice of a track reads the same
@@ -40,6 +44,9 @@
  * after power-on. The generator is xorshift32, one state for A (interrupt level) and one for B (the MIDI task);
  * each is seeded at its first use from a constant and the frame clock 0x80005398 (so another loop after each
  * power-on), and a test can set dv_rng_a / dv_rng_b beforehand for a fixed sequence.
+ *
+ * 0.2: the trig modes ONE and HALF of the stock waves run one cycle, or half a cycle, from the start phase (SPH),
+ * then hold their last value (dv.s, lfx_*; inspired by research findings of dn2_firmware_explore on OS 1.11).
  */
 typedef unsigned long u32;
 typedef long s32;
@@ -70,6 +77,8 @@ struct loop dv_loop_b[48] __attribute__((aligned(4)));  /* B: the same */
 u8 dv_pos_b[48][2] __attribute__((aligned(4)));         /* B: read position, step */
 u32 dv_rng_a, dv_rng_b;                                 /* 0: not seeded yet */
 u32 dv_frame;                                           /* frames: +1 per call of A (dv.s, dv_frame_hook) */
+u16 lfx_lat_b[240] __attribute__((aligned(4)));         /* 0.2, B: the latched start point of ONE/HALF, a word per
+                                                           8 bytes of B's block (dv.s, lfx_idx_b) */
 
 static u32 rnd(u32 *s)
 {
@@ -213,17 +222,79 @@ static const u8 dv_hi[7][12] = {
 /* the k of each machine's tuning rows, 0 = none (machine 0 FM Tone, 1 WaveTone, 2 FM Drum, 3 Swarmer) */
 static const u8 dv_tune_k[4][3] = { {50, 0, 0}, {25, 31, 48}, {25, 0, 0}, {25, 0, 0} };
 
-/* A (dv.s, dv_add_a) on WAVE 9..15: x = row[DEST] after the stock add and clamp (0..0x7f00) -> the value stored */
+/* 0.2, KEY: the pattern playing (the sequencer's pointer; a trig's notes are built from it) and KEYBOARD SETUP's
+ * scale and root in it: track t's at + 0x6a5 t + 0x492 / + 0x494, the pattern's at + 0x1dd40 + 0x1d / + 0x1f, bit 2
+ * of + 0x1dd40 + 0x21 set when they are per track (the stock getters 0x4003bdb2, 0x4003bce2, 0x4003ac0c read the
+ * same fields). A scale: -1 Chromatic, 0..34 a row of the stock table 0x4020e358 (8 notes, -1 after the last). */
+#define PLAYING    ((u8 *volatile *)0x42c5b9a0)
+#define SCALE_TAB  ((const s32 *)0x4020e358)
+#define VOICE_NOTE ((volatile u32 *)0x8000dda0)          /* voice v's note << 16, the transposes added (0x40026a44) */
+
+/* -> the scale's classes from its root (bit c: class c), and the root (0..11) */
+static int key_classes(int t, int *root)
+{
+    const u8 *p = *PLAYING;
+    int sc, rt, i, m = 0;
+
+    *root = 0;
+    if (!p)
+        return 0xfff;
+    if (p[0x1dd40 + 0x21] & 4) {
+        sc = (signed char)p[0x6a5 * t + 0x492];
+        rt = (signed char)p[0x6a5 * t + 0x494];
+    } else {
+        sc = (signed char)p[0x1dd40 + 0x1d];
+        rt = (signed char)p[0x1dd40 + 0x1f];
+    }
+    rt %= 12;
+    if (rt < 0)
+        rt += 12;
+    *root = rt;
+    if (sc < 0 || sc > 34)
+        return 0xfff;
+    for (i = 0; i < 8; i++) {
+        int n = SCALE_TAB[8 * sc + i];
+        if (n < 0)
+            break;
+        m |= 1 << (n % 12);
+    }
+    return m ? m : 0xfff;
+}
+
+/* A (dv.s, dv_add_a) on WAVE 9..16: x = row[DEST] after the stock add and clamp (0..0x7f00) -> the value stored */
 s32 dv_quant_a(s32 x, int wave, int dest, int row)
 {
     int m = MACHINE[0x99 * (row & 15)], sc = wave - 9, s, o, base, lo, hi, q;
     s32 rel, y;
 
-    if (m > 3 || sc < 0 || sc > 6 || dest <= 0)
+    if (m > 3 || sc < 0 || sc > 7 || dest <= 0)
         return x;
     if (dest != dv_tune_k[m][0] && dest != dv_tune_k[m][1] && dest != dv_tune_k[m][2])
         return x;
     rel = x - 0x4000;                                   /* 1/256 semitone from TUNE 0 */
+    if (sc == 7) {                                      /* KEY: from the scale's root, the voice's note included */
+        int root, cls = key_classes(OWNER[row & 15] & 15, &root), from;
+        from = (int)((VOICE_NOTE[row & 15] >> 16) & 0x7f) - root;
+        rel += from * 256;
+        s = rel >> 8;
+        o = s % 12;
+        if (o < 0)
+            o += 12;
+        base = s - o;
+        for (lo = o; !(cls >> lo & 1); lo--)            /* class 0, the root, is always in the scale */
+            ;
+        for (hi = o + 1; hi < 12 && !(cls >> hi & 1); hi++)
+            ;
+        lo += base;
+        hi += base;
+        q = (hi * 256 - rel < rel - lo * 256) ? hi : lo;
+        y = 0x4000 + (q - from) * 256;
+        if (y > 0x7f00)
+            y = 0x4000 + (lo - from) * 256;
+        if (y < 0)
+            y = 0x4000 + (hi - from) * 256;
+        return y;
+    }
     s = rel >> 8;                                       /* floor */
     o = s % 12;
     if (o < 0)
@@ -242,13 +313,13 @@ s32 dv_quant_a(s32 x, int wave, int dest, int row)
 
 /* rows 0x4f, 0x59, 0x63 +0x34, the WAVE value text, called as the stock ones: (value, out) -> what sprintf returns */
 static const char n7[] = "DV-F", n8[] = "DV-T", n9[] = "PMAJ", n10[] = "PMIN", n11[] = "HIRA", n12[] = "WTON",
-                  n13[] = "DORI", n14[] = "LYDI", n15[] = "OCTA";
-static const char *const dv_names[9] __attribute__((aligned(4))) = { n7, n8, n9, n10, n11, n12, n13, n14, n15 };
+                  n13[] = "DORI", n14[] = "LYDI", n15[] = "OCTA", n16[] = "KEY";
+static const char *const dv_names[10] __attribute__((aligned(4))) = { n7, n8, n9, n10, n11, n12, n13, n14, n15, n16 };
 
 int dv_fmt(int value, char *out)
 {
     int v = value >> 8;
-    if (v >= 7 && v <= 15)
+    if (v >= 7 && v <= 16)
         return SPRINTF(out, "%s", dv_names[v - 7]);
     return FMT_WAVE(value, out);
 }

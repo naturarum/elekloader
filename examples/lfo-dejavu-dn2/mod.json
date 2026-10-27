@@ -1,11 +1,11 @@
 {
  "id": "lfo-dejavu",
- "version": "0.1",
- "title": "Deja vu LFO waves: stored random loops and scales (DJ01)",
+ "version": "0.2",
+ "title": "Deja vu LFO waves: stored random loops and scales; ONE and HALF from the start phase (base 0.2)",
  "category": "Examples",
  "license": "GPL-2.0-or-later",
  "author": "naturarum",
- "description": "EXPERIMENT: emulator-tested only. Nine LFO waveforms after the stock seven, on all three LFOs of every track (audio and MIDI): DV-F, a free-running loop of stored random values; DV-T, the same restarted at its first value by a trig; PMAJ, PMIN, HIRA, WTON, DORI, LYDI, OCTA, the DV-F loop rounded to that scale when DEST is the machine's tuning (TUNE, TUN1, TUN2, MAST, PITCH), DV-F on any other destination. On these waves MODE is the loop length (FREE 2, TRIG 4, HOLD 8, ONE 16, HALF 32 values) and SPH the mutation (0 a new value at every step, up to 63 fewer, 64 the loop kept, above 64 more and more swaps, 127 a swap at every step); SPD and MULT set the rate (16 steps per LFO cycle, as RAND), FADE and DEP are stock. The behaviour and names follow Kari Gardarsson's Digitakt II Musical WAVE / Deja Vu (whose release credits Bezronczek's Syntakt Firmware Workbench), an idea from the deja vu of Emilie Gillet's Marbles; this is our own code. WAVE 7..15 save, load and p-lock as any stock value; the loops themselves are not saved (made anew after power-on). For dn2-cfw's DJ01 build.",
+ "description": "EXPERIMENT: emulator-tested only. Ten LFO waveforms after the stock seven, on all three LFOs of every track (audio and MIDI): DV-F, a free-running loop of stored random values; DV-T, the same restarted at its first value by a trig; PMAJ, PMIN, HIRA, WTON, DORI, LYDI, OCTA, the DV-F loop rounded to that scale when DEST is the machine's tuning (TUNE, TUN1, TUN2, MAST, PITCH), DV-F on any other destination; KEY, the same rounding in the track's own KEYBOARD SETUP scale and root, the voice's note included (0.2). On these waves MODE is the loop length (FREE 2, TRIG 4, HOLD 8, ONE 16, HALF 32 values) and SPH the mutation (0 a new value at every step, up to 63 fewer, 64 the loop kept, above 64 more and more swaps, 127 a swap at every step); SPD and MULT set the rate (16 steps per LFO cycle, as RAND), FADE and DEP are stock. The behaviour and names follow Kari Gardarsson's Digitakt II Musical WAVE / Deja Vu (whose release credits Bezronczek's Syntakt Firmware Workbench), an idea from the deja vu of Emilie Gillet's Marbles; this is our own code. WAVE 7..16 save, load and p-lock as any stock value; the loops themselves are not saved (made anew after power-on). 0.2: on the stock waves the trig modes ONE and HALF run one cycle, or half a cycle, from the start phase (SPH) and then hold their last value (stock stops them at fixed points of the cycle and jumps to a fixed value). For dn2-cfw's base 0.2.",
  "device": "digitone-mk2",
  "os": "1.12",
  "sources": [
@@ -17,7 +17,7 @@
    "addr": "0x401f9634",
    "stock": "00000600",
    "op": "bytes",
-   "new": "00000f00"
+   "new": "00001000"
   },
   {
    "addr": "0x401f965c",
@@ -29,7 +29,7 @@
    "addr": "0x401f988c",
    "stock": "00000600",
    "op": "bytes",
-   "new": "00000f00"
+   "new": "00001000"
   },
   {
    "addr": "0x401f98b4",
@@ -41,7 +41,7 @@
    "addr": "0x401f9ae4",
    "stock": "00000600",
    "op": "bytes",
-   "new": "00000f00"
+   "new": "00001000"
   },
   {
    "addr": "0x401f9b0c",
@@ -59,14 +59,14 @@
    "addr": "0x40137b60",
    "stock": "7e06",
    "op": "bytes",
-   "new": "7e0f",
+   "new": "7e10",
    "kind": "code"
   },
   {
    "addr": "0x40137b66",
    "stock": "7606",
    "op": "bytes",
-   "new": "760f",
+   "new": "7610",
    "kind": "code"
   },
   {
@@ -97,14 +97,14 @@
    "addr": "0x40137788",
    "stock": "7c06",
    "op": "bytes",
-   "new": "7c0f",
+   "new": "7c10",
    "kind": "code"
   },
   {
    "addr": "0x4013778e",
    "stock": "7606",
    "op": "bytes",
-   "new": "760f",
+   "new": "7610",
    "kind": "code"
   },
   {
@@ -112,6 +112,70 @@
    "stock": "43f94020b7f8",
    "op": "keep2",
    "target": "dv_wtab_b"
+  },
+  {
+   "addr": "0x40137c40",
+   "stock": "7006b0836716",
+   "op": "jmp",
+   "target": "lfx_trig_a"
+  },
+  {
+   "addr": "0x40137ccc",
+   "stock": "203c636ba875",
+   "op": "jsr",
+   "target": "lfx_eval_a"
+  },
+  {
+   "addr": "0x40137dbc",
+   "stock": "256a00500070",
+   "op": "jsr",
+   "target": "lfx_page_a"
+  },
+  {
+   "addr": "0x40137bcc",
+   "stock": "25500054",
+   "op": "bytes",
+   "new": "4e714e71",
+   "kind": "code"
+  },
+  {
+   "addr": "0x40137c00",
+   "stock": "25480054",
+   "op": "bytes",
+   "new": "4e714e71",
+   "kind": "code"
+  },
+  {
+   "addr": "0x40137836",
+   "stock": "7406b4836716",
+   "op": "jmp",
+   "target": "lfx_trig_b"
+  },
+  {
+   "addr": "0x401378d8",
+   "stock": "4c002800203c7f421f4f",
+   "op": "jsr",
+   "target": "lfx_eval_b"
+  },
+  {
+   "addr": "0x401379d8",
+   "stock": "256a00500070",
+   "op": "jsr",
+   "target": "lfx_page_b"
+  },
+  {
+   "addr": "0x401377c4",
+   "stock": "2ab03c00",
+   "op": "bytes",
+   "new": "4e714e71",
+   "kind": "code"
+  },
+  {
+   "addr": "0x401377fe",
+   "stock": "2a81",
+   "op": "bytes",
+   "new": "4e71",
+   "kind": "code"
   }
  ],
  "resources": {
