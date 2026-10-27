@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* spring-names (Digitone II OS 1.12): the reverb page as the spring tank of dn2-cfw's SP01 build
- * (github.com/naturarum/dn2-cfw, notes/SP01-spring-pack.md), whose DSP runs SPNG, a spring reverb, in the reverb slot
- * (notes/T5.5-spring-reverb.md). The stock reverb's page (SEND FX 2, page record 18), knob by knob; every knob keeps
+/* spring-names (Digitone II OS 1.12): the reverb page as the spring tank of dn2-cfw's SP02 build
+ * (github.com/naturarum/dn2-cfw, notes/SP02-spring-pack.md), whose DSP runs SPNG v2, a spring reverb, in the reverb
+ * slot (notes/T5.5-spring-reverb.md). 0.2: D is DIRT (0.1, for SP01: DWEL).
+ * The stock reverb's page (SEND FX 2, page record 18), knob by knob; every knob keeps
  * its row, k, MIDI CC, NRPN, storage and DSP frame word:
  *
  *   A PRE   row 0x7b k 41  "Pre-delay"     stock names; new-kit default 16 -> 0
@@ -9,7 +10,8 @@
  *                                           and "INF" at 127, and the spring's 127 is 16 s, not endless); new-kit
  *                                           default 31 -> 64 (2.2 s)
  *   C MODE  row 0x7d k 43  "Spring Mode"   was FREQ "FB Shelving Freq"; the spring's character (default 64, as stock)
- *   D DWEL  row 0x7e k 44  "Dwell"         was GAIN "FB Shelving Gain"; drive into the tank; new-kit default 50 -> 64
+ *   D DIRT  row 0x7e k 44  "Dirt"          was GAIN "FB Shelving Gain"; the soft clip on the wet output; new-kit
+ *                                           default 50 -> 0 (off)
  *   E HPF   row 0x7f k 45  "Input HPF"     stock names (the tank's input high-pass); new-kit default 32 -> 0
  *   F TONE  row 0x80 k 46  "Tone"          was LPF "Input LPF" (the spring's is in the loop); new-kit default 96 -> 127
  *   G WDTH  row 0x83 k 48  "Width"         the stock row "Reverb FX Routing" (0..1 Pre/Post, on no page, no CC,
@@ -18,12 +20,12 @@
  *                                           WDTH's picture, and placed on the empty G slot; new-kit default 96. Every
  *                                           existing kit holds 1 there (its stock default).
  *   H (empty), LEVEL VOL: stock.
- * C and D are drawn as knobs: the stock page draws them as one shelving-filter picture, which MODE and DWEL are not.
+ * C and D are drawn as knobs: the stock page draws them as one shelving-filter picture, which MODE and DIRT are not.
  * E and F keep the stock filter picture (a high-pass corner, then the low-pass), which is what HPF and TONE do.
  * Names repoint to strings of this mod; no stock string is edited (HPF, LPF, FREQ, GAIN, REV are shared with other
  * rows).
  *
- * Data (mod.json's sites, written by dn2-cfw's scripts/sp01_make_mod.py, which checks every stock value first):
+ * Data (mod.json's sites, written by dn2-cfw's scripts/sp02_make_mod.py, which checks every stock value first):
  * - `ptr` sites on descriptor rows (0x401f83a4 + 0x3c * row: +0x28 long name, +0x30 short label);
  * - `bytes` sites: new-kit defaults (+0x10, value << 8), row 0x83's maximum (+0x0c) and the two formatters (+0x34:
  *   the stock plain number 0x400e3030 for DEC and WDTH);
@@ -63,11 +65,11 @@ struct pagerec {                    /* 0x2c bytes */
     int level;
 };
 
-/* Widths in the 4 x 5 label font: MODE 20 px, DWEL 19, TONE 19, WDTH 19 (stock), as FDBK; in the title font "Spring
+/* Widths in the 4 x 5 label font: MODE 20 px, DIRT at most 19, TONE 19, WDTH 19 (stock), as FDBK; in the title font "Spring
  * (2/3)" is shorter than "Reverb (2/3)". */
 const char snm_spring[] = "Spring";               /* SEND FX 2 title: "Spring (2/3)" */
 const char snm_mode[] = "Spring Mode", snm_mode_s[] = "MODE";
-const char snm_dwel[] = "Dwell", snm_dwel_s[] = "DWEL";
+const char snm_dirt[] = "Dirt", snm_dirt_s[] = "DIRT";
 const char snm_tone[] = "Tone", snm_tone_s[] = "TONE";
 const char snm_wdth[] = "Width", snm_wdth_s[] = "WDTH";
 
