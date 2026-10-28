@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* boot-mark (Digitone II OS 1.12): the DIGIWERK mark in the start-up animation, in place of Elektron's logo. The
- * static screen before it (Elektron's logo and the OS version) is untouched.
+ * static screen before it (Elektron's logo and the OS version) is untouched. 0.2: the right way up (0.1 drew it upside
+ * down: the panel's rows run up, setPixel's y = 0 being the bottom row, as digikit's emu/panel.py decodes the panel).
  *
  * The intro, FUN_400d39ea, draws into a 128 x 64 source Bitmap (0x42c4667c) at its first frame: it clears it and
  * blits the logo, the Bitmap at 0x44647008, at (48, 20) (0x400d3ac4, jsr 0x40115adc); the frames after warp the source
@@ -9,8 +10,8 @@
  * it checks the bounds), so the stock animation animates it. (dn2_firmware_explore found the intro's structure on
  * OS 1.11, the same code here 0x1000 later; this is our own code.) For dn2-cfw (notes/BA02-base-0.2.md).
  *
- * bm_mark.h is written by dn2-cfw's scripts/ba02_make_boot.py: 64 rows of 128 pixels, one bit each, the left one
- * the high bit, our own pixel letters.
+ * bm_mark.h is written by dn2-cfw's scripts/ba03_make_boot.py: 64 rows of 128 pixels from the top, one bit each, the
+ * left one the high bit, our own pixel letters; row j goes to y = 63 - j.
  */
 typedef unsigned char u8;
 
@@ -29,5 +30,5 @@ void bm_draw(void *src, void *logo, int x, int y, int mode)
     for (j = 0; j < 64; j++)
         for (i = 0; i < 128; i++)
             if ((bm_mark[16 * j + (i >> 3)] >> (7 - (i & 7))) & 1)
-                SET_PIXEL(src, i, j, 1);
+                SET_PIXEL(src, i, 63 - j, 1);
 }
