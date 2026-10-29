@@ -1,0 +1,98 @@
+{
+ "id": "arp-midi",
+ "version": "0.1",
+ "title": "The arpeggiator on MIDI tracks",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: emulator-tested only. The ARP key, menu and LED work on MIDI-machine tracks, and a MIDI track whose arp is on plays through the stock arpeggiator: its trigs and live keys feed the arp, and the arp's notes leave on the track's MIDI channel by the path and timing of a stock MIDI trig (N.LEN as the nearest trig length not shorter, INF as one arp period). The trig's MIDI p-locks are not sent while the arp is on. Arp off, the track is stock. With arp-modes, SHUF, RAND and TM play on MIDI tracks too. Our own code, from a study of OS 1.12 (dn2-cfw notes/T2.2-arp-midi-v2.md).",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "ami.s"
+ ],
+ "sites": [
+  {
+   "addr": "0x4005f9c2",
+   "stock": "6600f58e",
+   "op": "bytes",
+   "new": "4e714e71",
+   "kind": "code"
+  },
+  {
+   "addr": "0x400187f6",
+   "stock": "670e",
+   "op": "bytes",
+   "new": "600e",
+   "kind": "code"
+  },
+  {
+   "addr": "0x40060dea",
+   "stock": "6620",
+   "op": "bytes",
+   "new": "4e71",
+   "kind": "code"
+  },
+  {
+   "addr": "0x400269e6",
+   "stock": "4eb94002a6a2",
+   "op": "jsr",
+   "target": "ami_sink"
+  },
+  {
+   "addr": "0x40026d86",
+   "stock": "4eb94002a6a2",
+   "op": "jsr",
+   "target": "ami_off"
+  },
+  {
+   "addr": "0x40121f2a",
+   "stock": "4eb940027c18",
+   "op": "jsr",
+   "target": "ami_liveon"
+  },
+  {
+   "addr": "0x40121bcc",
+   "stock": "4eb940027c18",
+   "op": "jsr",
+   "target": "ami_liveoff"
+  },
+  {
+   "addr": "0x400da036",
+   "stock": "207942c5b9ac",
+   "op": "jsr",
+   "target": "ami_seq"
+  },
+  {
+   "addr": "0x400da040",
+   "stock": "71685cda0500",
+   "op": "bytes",
+   "new": "4a004e714e71",
+   "kind": "code"
+  },
+  {
+   "addr": "0x400d91bc",
+   "stock": "207942c5b9ac",
+   "op": "jsr",
+   "target": "ami_pre"
+  },
+  {
+   "addr": "0x400d91c2",
+   "stock": "73685cda0501",
+   "op": "bytes",
+   "new": "207942c5b9ac",
+   "kind": "code"
+  }
+ ],
+ "resources": {
+  "names": [
+   "arp-midi-ui",
+   "arp-midi-voice",
+   "arp-midi-live",
+   "arp-midi-seq"
+  ]
+ },
+ "requires": [
+  "core"
+ ]
+}
