@@ -1,0 +1,143 @@
+{
+ "id": "trig-slide",
+ "version": "0.2",
+ "title": "Parameter slides between trigs (SLIDE on the RTRG page)",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT: not yet run on a unit. SLIDE (TRIG page 2, RTRG, knob E): when a note's gate goes off, the track's continuous parameters glide in a straight line to the values the next trig sets (its sound with its p-locks), arriving as it plays; no gap, no slide. Per step: SLIDE is p-lockable, a lock on a trig says whether the slide into it happens, a trig without one follows its sound's SLIDE. Lists, switches and modes change at the trig as before. Saved with the sound and in the pattern's locks under a stored id the stock storage leaves free (a stock OS reads SLIDE as off and drops its locks). Our own code, from a study of OS 1.12 (dn2-cfw notes/T2.9-trig-slides.md).",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "ts.c",
+  "ts_stubs.s"
+ ],
+ "sites": [
+  {
+   "addr": "0x400da184",
+   "stock": "4eb940138e3c",
+   "op": "jsr",
+   "target": "ts_queue_hook",
+   "note": "the sequencer task 0x400d99de: jsr 0x40138e3c(event, time), a step's trig event into the queue (ts_queue_hook keeps d1 and a1, which 0x40138e3c leaves alone)"
+  },
+  {
+   "addr": "0x40025f00",
+   "stock": "49f94002b06e",
+   "op": "keep2",
+   "target": "ts_gateoff",
+   "note": "the block handler 0x40025e36: lea (0x4002b06e).l,An, the end of a voice's gate, then jsr (An)"
+  },
+  {
+   "addr": "0x40026778",
+   "stock": "47f94002b06e",
+   "op": "keep2",
+   "target": "ts_gateoff",
+   "note": "the block handler 0x40025e36: lea (0x4002b06e).l,An, the end of a voice's gate, then jsr (An)"
+  },
+  {
+   "addr": "0x40026c50",
+   "stock": "45f94002b06e",
+   "op": "keep2",
+   "target": "ts_gateoff",
+   "note": "the block handler 0x40025e36: lea (0x4002b06e).l,An, the end of a voice's gate, then jsr (An)"
+  },
+  {
+   "addr": "0x40026f78",
+   "stock": "49f94002b06e",
+   "op": "keep2",
+   "target": "ts_gateoff",
+   "note": "the block handler 0x40025e36: lea (0x4002b06e).l,An, the end of a voice's gate, then jsr (An)"
+  },
+  {
+   "addr": "0x40026ff6",
+   "stock": "47f94002b06e",
+   "op": "keep2",
+   "target": "ts_gateoff",
+   "note": "the block handler 0x40025e36: lea (0x4002b06e).l,An, the end of a voice's gate, then jsr (An)"
+  },
+  {
+   "addr": "0x4002717e",
+   "stock": "4eb9400db28e",
+   "op": "jsr",
+   "target": "ts_block",
+   "note": "the block handler: jsr 0x400db28e(0x80003af0), the parameter mirror's smoothing (its d0 goes on to 0x400db390: ts_block returns it)"
+  },
+  {
+   "addr": "0x400dd8b2",
+   "stock": "156b00de00f4",
+   "op": "jsr",
+   "target": "ts_ser",
+   "note": "the sound serializer 0x400dd80a: move.b (0xde,a3),(0xf4,a2), after its map loop"
+  },
+  {
+   "addr": "0x400dd3e6",
+   "stock": "712a001c7406",
+   "op": "jsr",
+   "target": "ts_load",
+   "note": "the sound loader 0x400dd34e: mvs.b (0x1c,a2),d0; moveq #6,d2, after its map loop"
+  },
+  {
+   "addr": "0x400d7f14",
+   "stock": "2e3c40138e3c",
+   "op": "keep2",
+   "target": "ts_start_hook",
+   "note": "play start (0x400d7e88): move.l #0x40138e3c,d7, the call for each track's first trig"
+  },
+  {
+   "addr": "0x400d8380",
+   "stock": "2e3c40138e3c",
+   "op": "keep2",
+   "target": "ts_start_hook",
+   "note": "play start (0x400d806a): move.l #0x40138e3c,d7, the call for each track's first trig"
+  },
+  {
+   "addr": "0x400de896",
+   "stock": "47f9401fd330",
+   "op": "jsr",
+   "target": "ts_lmap",
+   "note": "the pattern's lock serializer 0x400de87c: lea (0x401fd330).l,a3, its k -> stored id map (k 0..99)"
+  },
+  {
+   "addr": "0x400de6ec",
+   "stock": "42824bfae734",
+   "op": "jsr",
+   "target": "ts_lpre",
+   "note": "the pattern's lock loader 0x400de682: clr.l d2; lea (-0x18cc,pc),a5, the converter 0x400dce24 it calls through a5"
+  },
+  {
+   "addr": "0x400de6f8",
+   "stock": "786a",
+   "op": "bytes",
+   "new": "786b",
+   "kind": "code",
+   "note": "the lock loader's test of a lane's stored id: moveq #0x6a,d4 (ids 0..106) -> #0x6b (107: SLIDE)"
+  }
+ ],
+ "contribute": [
+  {
+   "to": "param_rows",
+   "order": 60,
+   "data": "00000000",
+   "relocs": [
+    [
+     0,
+     "abs32",
+     "sym:ts_rows",
+     0
+    ]
+   ]
+  }
+ ],
+ "resources": {
+  "names": [
+   "param-row:0x155",
+   "sound-k:100",
+   "sound-stored-id:107",
+   "pattern-lock-stored-id:107"
+  ]
+ },
+ "requires": [
+  "core",
+  "param-grow"
+ ]
+}

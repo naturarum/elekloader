@@ -1,0 +1,84 @@
+{
+ "id": "usb-multi",
+ "version": "0.4",
+ "title": "USB MULTI/MIDI: a fourth USB CONFIG choice that sends all 42 channels, the 16 tracks as stereo pairs, class compliant",
+ "category": "Examples",
+ "license": "GPL-2.0-or-later",
+ "author": "naturarum",
+ "description": "EXPERIMENT. A fourth USB CONFIG choice, USB MULTI/MIDI (SETTINGS > SYSTEM > USB CONFIG): the Digitone shows up as a class-compliant USB Audio 2.0 device with 42 inputs at 24 bits and 48 kHz, no driver needed: 1-32 the 16 tracks as stereo pairs (track n on 2n-1 and 2n), 33-34 the main mix, 35-40 the delay, reverb and chorus returns, 41-42 the inputs. USB AUDIO/MIDI stays Elektron's stereo mode; audio from the computer, USB MIDI and OVERBRIDGE are untouched. Saved as USB CONFIG 3, which Elektron's own OS reads as USB MIDI at power-on. Our own code, from a study of OS 1.12 (dn2-cfw notes/USB01-class-compliant-multichannel.md).",
+ "device": "digitone-mk2",
+ "os": "1.12",
+ "sources": [
+  "um.c",
+  "um_stubs.s"
+ ],
+ "sites": [
+  {
+   "addr": "0x400040e6",
+   "stock": "203c40380000",
+   "op": "jsr",
+   "target": "um_dqh",
+   "note": "FUN_400040a6 (mode 5's endpoints): move.l #0x40380000,d0, the dQH capabilities of EP 0x83 IN (one transaction, 56 bytes) -> jsr um_dqh: that, or #0x43720000 (882) with um_on"
+  },
+  {
+   "addr": "0x40027772",
+   "stock": "4eb940003d00",
+   "op": "jsr",
+   "target": "um_send",
+   "note": "FUN_40025e36, USB AUDIO mode: jsr 0x40003d00 (the block's stereo frames); the stock one unless um_on"
+  },
+  {
+   "addr": "0x400279d4",
+   "stock": "4eb940003d00",
+   "op": "jsr",
+   "target": "um_mute",
+   "note": "FUN_40025e36, the silent path: jsr 0x40003d00 after zeroing the stereo frames; the stock one unless um_on"
+  },
+  {
+   "addr": "0x4000655e",
+   "stock": "4eb940003b32",
+   "op": "jsr",
+   "target": "um_start",
+   "note": "FUN_40005ff6 (SET_INTERFACE, IN alt 1): jsr 0x40003b32, the stream's start; the stock one unless um_on"
+  },
+  {
+   "addr": "0x40006880",
+   "stock": "10bc0022f4684e75",
+   "op": "jmp",
+   "target": "um_desc",
+   "note": "FUN_4000677a (the descriptors' run-time values, once at the USB start-up): move.b #0x22,(a0); cpushl dc,(a0); rts -> jmp um_desc (that write, then mode 5's descriptors for the choice)"
+  },
+  {
+   "addr": "0x400cf22c",
+   "stock": "6606",
+   "op": "bytes",
+   "new": "6e06",
+   "kind": "code",
+   "note": "the start-up's USB mode from USB CONFIG (0x400cf216): bne (not 2: USB MIDI) -> bgt (below 2), so 3 starts mode 5 as 2 does"
+  },
+  {
+   "addr": "0x40105220",
+   "stock": "205242a72f06",
+   "op": "jsr",
+   "target": "um_menu_hook",
+   "note": "FUN_40104f42 (the USB CFG menu), after its third item: movea.l (a2),a0; clr.l -(sp); move.l d6,-(sp) -> jsr um_menu_hook (the fourth item, USB MULTI/MIDI, then those three)"
+  },
+  {
+   "addr": "0x40104d54",
+   "stock": "4eb9400bb798",
+   "op": "jsr",
+   "target": "um_cfg_get",
+   "note": "USB AUDIO/MIDI's check box (0x40104d3a): jsr 0x400bb798 (USB CONFIG, 0-2) -> um_cfg_get (0-3), so a 3 does not tick it"
+  },
+  {
+   "addr": "0x40104e02",
+   "stock": "4ef940006c16",
+   "op": "jmp",
+   "target": "um_mode_set",
+   "note": "USB AUDIO/MIDI's choice (0x40104df0): jmp 0x40006c16 (mode 5) -> um_mode_set, which restarts USB when only the descriptors change"
+  }
+ ],
+ "requires": [
+  "core"
+ ]
+}
